@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nuswantara Wallet v18.7</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        body { background-color: #111; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .btn-action { cursor: pointer; transition: 0.2s; }
+        .btn-action:active { transform: scale(0.95); }
+    </style>
+</head>
+<body>
+
+<div id="walletApp" style="border: 4px solid #f1c40f; background: #050505; border-radius: 25px; padding: 25px; font-family: 'Segoe UI', sans-serif; color: #fff; width: 100%; max-width: 500px; box-shadow: 0 0 60px rgba(241, 196, 15, 0.3);">
+    
+    <div id="lockScreen" style="display:none; text-align: center; padding: 20px;">
+        <div style="font-size: 3.5rem; margin-bottom: 10px;">🔐</div>
+        <h3 id="lockTitle" style="color:#f1c40f; margin-bottom: 25px; letter-spacing: 2px;">WALLET TERKUNCI</h3>
+        <input type="password" id="loginKey" placeholder="Private Key Pameran" style="width:100%; padding:15px; margin-bottom:12px; background:#111; border:1px solid #333; color:#fff; border-radius:12px; text-align:center; font-size: 1rem; box-sizing: border-box;">
+        <input type="number" id="loginPin" placeholder="PIN Wallet (4-Digit)" style="width:100%; padding:15px; margin-bottom:20px; background:#111; border:1px solid #333; color:#fff; border-radius:12px; text-align:center; font-size: 1rem; box-sizing: border-box;">
+        <button onclick="unlockWallet()" class="btn-action" style="width:100%; padding:15px; background:#f1c40f; color:#000; border:none; border-radius:12px; font-weight:bold; font-size: 1rem;">BUKA BRANKAS</button>
+    </div>
+
+    <div id="walletPanel" style="display:none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <span style="font-size: 0.65rem; color: #f1c40f; letter-spacing: 1px; font-weight: bold;">NUSWANTARA v18.7</span>
+            <button onclick="logout()" style="background:#222; color:#555; border:none; padding:4px 10px; border-radius:8px; font-size:0.6rem; cursor:pointer;">LOGOUT</button>
+        </div>
+
+        <div style="background:#111; padding:20px; border-radius:20px; border: 1px solid #222; margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-around; text-align: center; margin-bottom: 20px;">
+                <div>
+                    <div id="valDinar" style="font-size: 2.8rem; font-weight: bold; color: #f1c40f;">0</div>
+                    <div style="font-size: 0.7rem; color: #888; font-weight:bold;">DINAR</div>
+                </div>
+                <div>
+                    <div id="valDirham" style="font-size: 2.8rem; font-weight: bold; color: #e5e4e2;">0</div>
+                    <div style="font-size: 0.7rem; color: #888; font-weight:bold;">DIRHAM</div>
+                </div>
+            </div>
+            <div style="border-top: 1px solid #222; padding-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-family: monospace;">
+                <div style="text-align: center; background: rgba(243, 156, 18, 0.1); padding: 8px; border-radius: 10px;">
+                    <div id="goldGram" style="color: #f39c12; font-size: 0.9rem; font-weight: bold;">0.000g</div>
+                    <div style="font-size: 0.55rem; color: #666;">EQ. EMAS (Au)</div>
+                </div>
+                <div style="text-align: center; background: rgba(189, 195, 199, 0.1); padding: 8px; border-radius: 10px;">
+                    <div id="silverGram" style="color: #bdc3c7; font-size: 0.9rem; font-weight: bold;">0.000g</div>
+                    <div style="font-size: 0.55rem; color: #666;">EQ. PERAK (Ag)</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="scanner-wrapper" style="display:none; margin-bottom: 15px; position:relative;">
+            <div id="reader" style="width:100%; border-radius:15px; overflow:hidden; border:2px solid #f1c40f;"></div>
+            <button onclick="stopScanner()" style="position:absolute; top:10px; right:10px; background:#e74c3c; color:white; border:none; padding:5px 12px; border-radius:8px; z-index:100; cursor:pointer; font-weight:bold;">TUTUP [X]</button>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+            <button onclick="startScanner()" class="btn-action" style="flex:1; background:#3498db; color:white; border:none; padding:15px; border-radius:15px; font-weight:bold; font-size:0.8rem;">📷 SCAN QR</button>
+            <button onclick="toggleClaimManual()" class="btn-action" style="flex:1; background:#222; color:#3498db; border:1px solid #3498db; padding:15px; border-radius:15px; font-weight:bold; font-size:0.8rem;">⌨️ CLAIM MANUAL</button>
+        </div>
+
+        <div id="manualClaim" style="display:none; margin-bottom:15px; background:#111; padding:15px; border-radius:15px; border: 1px dashed #444;">
+            <input type="text" id="tokenIn" placeholder="Paste TOKEN-..." style="width:100%; padding:12px; background:#000; color:white; border:1px solid #333; border-radius:10px; box-sizing:border-box; margin-bottom:10px;">
+            <button onclick="execClaim()" class="btn-action" style="width:100%; background:#3498db; color:white; border:none; padding:12px; border-radius:10px; font-weight:bold;">PROSES CLAIM</button>
+        </div>
+
+        <div style="background:#111; padding:15px; border-radius:15px; border: 1px solid #222; margin-bottom:15px;">
+            <label style="font-size: 0.7rem; color: #f1c40f; font-weight:bold; display:block; margin-bottom:10px;">KIRIM DINAR (EMAS):</label>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom:15px;">
+                <button onclick="quickSend(20115, '1/4 Dn')" class="btn-action" style="font-size:0.55rem; padding:10px 0; background:#1a1a1a; color:#ffd700; border:1px solid #444; border-radius:8px;">1/4 Dn</button>
+                <button onclick="quickSend(40230, '1/2 Dn')" class="btn-action" style="font-size:0.55rem; padding:10px 0; background:#1a1a1a; color:#ffd700; border:1px solid #444; border-radius:8px;">1/2 Dn</button>
+                <button onclick="quickSend(80460, '1 Dn')" class="btn-action" style="font-size:0.55rem; padding:10px 0; background:#222; color:#ffd700; border:1px solid #f1c40f; border-radius:8px; font-weight:bold;">1 Dn</button>
+                <button onclick="quickSend(160920, '2 Dn')" class="btn-action" style="font-size:0.55rem; padding:10px 0; background:#222; color:#ffd700; border:1px solid #f1c40f; border-radius:8px; font-weight:bold;">2 Dn</button>
+            </div>
+            <label style="font-size: 0.7rem; color: #bdc3c7; font-weight:bold; display:block; margin-bottom:10px;">KIRIM DIRHAM (PERAK):</label>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+                <button onclick="quickSend(745, '1/4 Dr')" class="btn-action" style="font-size:0.6rem; padding:10px 0; background:#1a1a1a; color:#fff; border:1px solid #333; border-radius:8px;">1/4 Dr</button>
+                <button onclick="quickSend(1490, '1/2 Dr')" class="btn-action" style="font-size:0.6rem; padding:10px 0; background:#1a1a1a; color:#fff; border:1px solid #333; border-radius:8px;">1/2 Dr</button>
+                <button onclick="quickSend(2235, '3/4 Dr')" class="btn-action" style="font-size:0.6rem; padding:10px 0; background:#1a1a1a; color:#fff; border:1px solid #333; border-radius:8px;">3/4 Dr</button>
+                <button onclick="quickSend(2980, '1 Dr')" class="btn-action" style="font-size:0.6rem; padding:10px 0; background:#333; color:#fff; border:1px solid #bdc3c7; border-radius:8px; font-weight:bold;">1 Dr</button>
+                <button onclick="quickSend(5960, '2 Dr')" class="btn-action" style="font-size:0.6rem; padding:10px 0; background:#333; color:#fff; border:1px solid #bdc3c7; border-radius:8px; font-weight:bold;">2 Dr</button>
+                <button onclick="quickSend(14900, '5 Dr')" class="btn-action" style="font-size:0.6rem; padding:10px 0; background:#333; color:#fff; border:1px solid #bdc3c7; border-radius:8px; font-weight:bold;">5 Dr</button>
+            </div>
+        </div>
+
+        <div id="qrResult" style="display:none; background:white; padding:20px; border-radius:20px; margin-top:20px; text-align:center; box-shadow: 0 10px 30px rgba(241,196,15,0.4);">
+            <div id="qrcode" style="display: inline-block; margin-bottom: 10px;"></div>
+            <div id="textToken" style="font-size:0.5rem; color:#000; word-break:break-all; font-family:monospace; background:#eee; padding:5px; border-radius:5px;" onclick="copy(this)"></div>
+            <div style="color:#e74c3c; font-size:0.7rem; margin-top:10px; font-weight:bold; letter-spacing:1px;">SCAN QR UNTUK MENERIMA</div>
+        </div>
+
+        <div style="border-top: 1px solid #222; padding-top:15px; margin-top: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px;">
+                <label style="font-size: 0.6rem; color: #444; text-transform: uppercase;">Riwayat Transaksi:</label>
+                <button onclick="clearHistory()" style="background:none; border:none; color:#e74c3c; font-size:0.5rem; cursor:pointer; text-decoration:underline;">Hapus Log</button>
+            </div>
+            <div id="historyLog" style="height:150px; overflow-y:auto; font-size:0.65rem; background:#000; border-radius:12px; padding:12px;"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+// --- CONFIG PUSAT ---
+const DB_URL = "https://pasarnuswantara-default-rtdb.asia-southeast1.firebasedatabase.app/";
+const MG_PER_DIRHAM = 2980;
+const MG_PER_DINAR = 80460;
+
+// --- STATE MANAGEMENT ---
+let savedKey = localStorage.getItem('nw_key') || "";
+let savedPin = localStorage.getItem('nw_pin') || "";
+let totalMg = parseInt(localStorage.getItem('nw_mg')) || 0;
+let history = JSON.parse(localStorage.getItem('nw_hist')) || [];
+let html5QrCode;
+
+// --- SMART LABEL DETECTOR ---
+// Fungsi ini mengubah angka miligram mentah menjadi Label Cantik (misal: "2 Dn" atau "1/4 Dr")
+function getAutoLabel(mg) {
+    if(mg === 160920) return "2 Dn";
+    if(mg === 80460) return "1 Dn";
+    if(mg === 40230) return "1/2 Dn";
+    if(mg === 20115) return "1/4 Dn";
+    if(mg === 14900) return "5 Dr";
+    if(mg === 5960) return "2 Dr";
+    if(mg === 2980) return "1 Dr";
+    if(mg === 2235) return "3/4 Dr";
+    if(mg === 1490) return "1/2 Dr";
+    if(mg === 745) return "1/4 Dr";
+    // Kalau nominal aneh/custom, baru pake desimal
+    return (mg/2980).toFixed(2) + " Dr";
+}
+
+// --- SECURITY SYSTEM ---
+function unlockWallet() {
+    let k = document.getElementById('loginKey').value.trim();
+    let p = document.getElementById('loginPin').value.trim();
+    if(savedKey === "") {
+        if(k.length < 4 || p.length < 4) return alert("Setup Gagal: Key & PIN minimal 4 karakter!");
+        localStorage.setItem('nw_key', k);
+        localStorage.setItem('nw_pin', p);
+        alert("Wallet Berhasil Dibuat! Silakan Login.");
+        location.reload();
+    } else {
+        if(k === savedKey && p === savedPin) {
+            document.getElementById('lockScreen').style.display = "none";
+            document.getElementById('walletPanel').style.display = "block";
+            updateUI();
+        } else { alert("AKSES DITOLAK: Kunci atau PIN Salah!"); }
+    }
+}
+function logout() { location.reload(); }
+
+// --- DASHBOARD UPDATE ---
+function updateUI() {
+    let td = totalMg / MG_PER_DIRHAM;
+    document.getElementById('valDinar').innerText = Math.floor(td / 27);
+    document.getElementById('valDirham').innerText = (td % 27).toFixed(2);
+    document.getElementById('silverGram').innerText = (totalMg / 1000).toFixed(3) + "g";
+    document.getElementById('goldGram').innerText = (td * (4.25/27)).toFixed(3) + "g";
+    localStorage.setItem('nw_mg', totalMg);
+    renderLog();
+}
+
+// --- QR SCANNER SYSTEM ---
+function startScanner() {
+    document.getElementById('scanner-wrapper').style.display = 'block';
+    html5QrCode = new Html5Qrcode("reader");
+    html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, 
+    (decodedText) => {
+        stopScanner();
+        document.getElementById('tokenIn').value = decodedText;
+        execClaim();
+    }, (errorMessage) => {});
+}
+function stopScanner() {
+    if(html5QrCode) {
+        html5QrCode.stop().then(() => { document.getElementById('scanner-wrapper').style.display = 'none'; });
+    }
+}
+function toggleClaimManual() {
+    let m = document.getElementById('manualClaim');
+    m.style.display = m.style.display === 'none' ? 'block' : 'none';
+}
+
+// --- CRYPTO LOGIC ---
+function createSig(d, k) {
+    let s = d + k; let h = 0;
+    for (let i = 0; i < s.length; i++) { h = ((h << 5) - h) + s.charCodeAt(i); h |= 0; }
+    return Math.abs(h).toString(36);
+}
+
+// --- CLAIM LOGIC (MASUK) ---
+async function execClaim() {
+    let input = document.getElementById('tokenIn').value.replace("TOKEN-", "").trim();
+    if(!input) return;
+
+    try {
+        let [payload, sig] = atob(input).split("|");
+        if(sig !== createSig(payload, savedKey)) throw "QR Code Tidak Dikenali / Beda Ekosistem!";
+        let [mg, time, nonce] = payload.split(":");
+        let amtMg = parseInt(mg);
+        
+        const check = await fetch(`${DB_URL}used_tokens/${nonce}.json`);
+        const cloudData = await check.json();
+        if(cloudData && (cloudData.claimed || cloudData.burned)) throw "Token Sudah Kadaluarsa / Dipakai!";
+
+        await fetch(`${DB_URL}used_tokens/${nonce}.json`, { 
+            method: 'PUT', body: JSON.stringify({ claimed: true, at: new Date().toISOString() }) 
+        });
+
+        totalMg += amtMg;
+        
+        // --- PENGGUNAAN SMART LABEL ---
+        // Di sini kita cek beratnya, lalu tentukan labelnya
+        let cantikLabel = getAutoLabel(amtMg);
+
+        history.unshift({
+            t: 'MASUK', 
+            label: cantikLabel, // <--- Label Otomatis (misal: "2 Dn")
+            time: new Date().toLocaleTimeString()
+        });
+        
+        updateUI();
+        alert("BERHASIL! Saldo masuk.");
+        document.getElementById('manualClaim').style.display = 'none';
+        document.getElementById('tokenIn').value = "";
+        
+    } catch(e) { alert("GAGAL: " + e); }
+}
+
+// --- SEND LOGIC (KELUAR) ---
+function quickSend(mg, label) {
+    if (mg > totalMg) return alert("SALDO TIDAK CUKUP!");
+    let p = prompt(`KONFIRMASI KIRIM ${label}\nMasukkan PIN Wallet:`);
+    if(p !== savedPin) return alert("PIN SALAH!");
+
+    totalMg -= mg;
+    const nonce = "W-" + Math.random().toString(36).substring(2, 7).toUpperCase();
+    const payload = `${mg}:${Date.now()}:${nonce}`;
+    const token = "TOKEN-" + btoa(payload + "|" + createSig(payload, savedKey));
+
+    updateUI();
+    document.getElementById('qrResult').style.display = 'block';
+    document.getElementById('qrcode').innerHTML = "";
+    new QRCode(document.getElementById("qrcode"), { text: token, width: 200, height: 200 });
+    document.getElementById('textToken').innerText = token;
+    
+    // Log Keluar pake Label dari Tombol
+    history.unshift({
+        t: 'KELUAR', 
+        label: label, 
+        raw: token, 
+        time: new Date().toLocaleTimeString()
+    });
+    renderLog();
+}
+
+// --- LOG RENDER ---
+function renderLog() {
+    document.getElementById('historyLog').innerHTML = history.slice(0, 30).map(h => `
+        <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #111; align-items:center;">
+            <div>
+                <span style="color:${h.t==='MASUK'?'#2ecc71':'#e74c3c'}; font-weight:bold; font-size:0.75rem;">
+                    ${h.t} ${h.label}
+                </span><br>
+                <small style="color:#555; font-size:0.55rem;">${h.time}</small>
+            </div>
+            ${h.t==='KELUAR' ? `
+                <button onclick="reShow('${h.raw}')" style="font-size:0.55rem; background:#222; color:#f1c40f; border:1px solid #444; cursor:pointer; padding:5px 10px; border-radius:6px;">LIHAT QR</button>` : 
+                `<span style="font-size:0.5rem; color:#333;">VERIFIED</span>`
+            }
+        </div>
+    `).join('');
+    localStorage.setItem('nw_hist', JSON.stringify(history));
+}
+
+function reShow(token) {
+    document.getElementById('qrResult').style.display = 'block';
+    document.getElementById('qrcode').innerHTML = "";
+    new QRCode(document.getElementById("qrcode"), { text: token, width: 200, height: 200 });
+    document.getElementById('textToken').innerText = token;
+    document.getElementById('qrResult').scrollIntoView({behavior: "smooth"});
+}
+
+function copy(el) { navigator.clipboard.writeText(el.innerText); alert("Token Teks Disalin!"); }
+function clearHistory() { if(confirm("Hapus semua riwayat transaksi?")) { history = []; updateUI(); } }
+
+if(savedKey === "") {
+    document.getElementById('lockScreen').style.display = "block";
+    document.getElementById('lockTitle').innerText = "SETUP WALLET BARU";
+} else { document.getElementById('lockScreen').style.display = "block"; }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mahapustaka Nuswantara (Live Audit v2.2)</title>
+    <style>
+        body { background-color: #000; color: #fff; font-family: 'Courier New', monospace; margin: 0; padding: 20px; }
+        .header { text-align: center; border-bottom: 2px solid #f1c40f; padding-bottom: 20px; margin-bottom: 20px; }
+        .market-cap { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
+        .card { background: #111; border: 1px solid #333; padding: 20px; border-radius: 10px; text-align: center; }
+        .big-val { font-size: 2.5rem; font-weight: bold; margin: 10px 0; }
+        .gold { color: #f1c40f; border-color: #f1c40f; }
+        .silver { color: #bdc3c7; border-color: #bdc3c7; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+        th { text-align: left; border-bottom: 1px solid #555; padding: 10px; color: #888; }
+        td { padding: 10px; border-bottom: 1px solid #222; }
+        .in { color: #2ecc71; }
+        .out { color: #e74c3c; }
+        .hash { color: #555; font-size: 0.7rem; }
+        .live-indicator { display: inline-block; width: 10px; height: 10px; background: #e74c3c; border-radius: 50%; animation: blink 1s infinite; margin-right: 5px; }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h2><span class="live-indicator"></span>MAHAPUSTAKA LEDGER (ONLINE)</h2>
+        <small>Transparansi Ekosistem Ekonomi Nuswantara</small>
+    </div>
+
+    <div class="market-cap">
+        <div class="card gold">
+            <div style="font-size: 0.8rem;">TOTAL DINAR BEREDAR</div>
+            <div id="dispDinar" class="big-val">0 Dn</div>
+            <div id="dispGold" style="font-size: 0.9rem;">Backing Fisik: 0.00g Au</div>
+        </div>
+        <div class="card silver">
+            <div style="font-size: 0.8rem;">TOTAL DIRHAM BEREDAR</div>
+            <div id="dispDirham" class="big-val">0 Dr</div>
+            <div id="dispSilver" style="font-size: 0.9rem;">Backing Fisik: 0.00g Ag</div>
+        </div>
+    </div>
+
+    <h3 style="color:#3498db; border-left: 4px solid #3498db; padding-left: 10px;">ARUS TRANSAKSI LIVE</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>WAKTU</th>
+                <th>AKTIVITAS</th>
+                <th>NILAI</th>
+                <th>HASH ID</th>
+            </tr>
+        </thead>
+        <tbody id="txTable">
+            <tr><td colspan="4" style="text-align:center; color:#555;">Menunggu Data Transaksi...</td></tr>
+        </tbody>
+    </table>
+
+<script>
+    // --- DATABASE PUSAT ---
+    const DB_URL = "https://pasarnuswantara-default-rtdb.asia-southeast1.firebasedatabase.app/";
+    const MG_PER_DIRHAM = 2980;
+
+    async function fetchCloudData() {
+        try {
+            // 1. Ambil Total Supply
+            let statsRes = await fetch(`${DB_URL}market_stats.json`);
+            let stats = await statsRes.json();
+            
+            // --- LOGIKA ANTI-RACUN (FIX UTAMA) ---
+            let totalMg = 0;
+            if (stats && stats.total_supply_mg) {
+                // Pakai Number() lalu cek isNaN. Kalau NaN, paksa jadi 0.
+                totalMg = Number(stats.total_supply_mg);
+                if (isNaN(totalMg)) totalMg = 0;
+            }
+            updateDashboard(totalMg);
+
+            // 2. Ambil 15 Transaksi Terakhir
+            let ledgerRes = await fetch(`${DB_URL}public_ledger.json?orderBy="$key"&limitToLast=15`);
+            let ledgerData = await ledgerRes.json();
+            
+            if(ledgerData) {
+                let logs = Object.values(ledgerData).reverse(); 
+                updateTable(logs);
+            }
+
+        } catch(e) { console.log("Sync error: " + e); }
+    }
+
+    function updateDashboard(mg) {
+        // Double Safety Check
+        if (isNaN(mg)) mg = 0;
+
+        let td = mg / MG_PER_DIRHAM;
+        let dinar = Math.floor(td / 27);
+        let sisaDr = (td % 27).toFixed(2);
+        let gramPerak = (mg / 1000).toFixed(2);
+        let gramEmas = (td * (4.25/27)).toFixed(2);
+
+        document.getElementById('dispDinar').innerText = dinar.toLocaleString() + " Dn";
+        document.getElementById('dispDirham').innerText = sisaDr + " Dr";
+        document.getElementById('dispGold').innerText = `Backing Fisik: ${gramEmas}g Au`;
+        document.getElementById('dispSilver').innerText = `Backing Fisik: ${gramPerak}g Ag`;
+    }
+
+    function updateTable(logs) {
+        let html = "";
+        logs.forEach(log => {
+            // SAFETY FILTER: Buang data yang strukturnya kacau (sisa percobaan lama)
+            if (!log || typeof log !== 'object') return;
+            if (!log.type) return; 
+
+            let isMint = log.type === 'MINT';
+            let colorClass = isMint ? 'in' : 'out';
+            let labelType = isMint ? 'CETAK (MINT)' : 'TARIK (BURN)';
+            let sign = isMint ? '+' : '-';
+            
+            // Format Waktu Aman
+            let timeStr = "-";
+            try {
+                if(log.timestamp) {
+                    let date = new Date(log.timestamp);
+                    timeStr = date.toLocaleTimeString('id-ID');
+                    if(timeStr === "Invalid Date") timeStr = "Barusan";
+                }
+            } catch(e) { timeStr = "-"; }
+
+            // Pastikan Label Tidak Undefined
+            let cleanLabel = log.label ? log.label : (log.val ? (log.val + " Unit") : "???");
+            let cleanId = log.tx_id ? log.tx_id : (log.id ? log.id : "???");
+
+            html += `
+                <tr>
+                    <td>${timeStr}</td>
+                    <td class="${colorClass}" style="font-weight:bold;">${labelType}</td>
+                    <td class="${colorClass}">${sign} ${cleanLabel}</td>
+                    <td class="hash">ID: ${cleanId}</td>
+                </tr>
+            `;
+        });
+
+        if (html === "") html = `<tr><td colspan="4" style="text-align:center; color:#555;">Belum ada data valid...</td></tr>`;
+        document.getElementById('txTable').innerHTML = html;
+    }
+
+    setInterval(fetchCloudData, 3000);
+    fetchCloudData();
+</script>
+
+</body>
+</html>
