@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nuswantara Wallet v19.6</title>
+    <title>Nuswantara Wallet v19.7 (Debug)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
@@ -16,7 +16,7 @@
 </head>
 <body>
 
-<div id="walletApp" style="border: 4px solid #f1c40f; background: #050505; border-radius: 25px; padding: 25px; font-family: 'Segoe UI', sans-serif; color: #fff; width: 100%; max-width: 500px; box-shadow: 0 0 60px rgba(241, 196, 15, 0.3);">
+<div id="walletApp" style="border: 4px solid #f1c40f; background: #050505; border-radius: 25px; padding: 25px; font-family: 'Segoe UI', sans-serif; color: #fff; width: 100%; max-width: 500px; box-shadow: 0 0 60px rgba(241, 196, 15, 0.3); position:relative;">
     
     <div id="lockScreen" style="display:none; text-align: center; padding: 20px;">
         <div style="font-size: 3.5rem; margin-bottom: 10px;">🔐</div>
@@ -44,7 +44,7 @@
 
     <div id="walletPanel" style="display:none;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <span style="font-size: 0.65rem; color: #f1c40f; letter-spacing: 1px; font-weight: bold;">NUSWANTARA v19.6</span>
+            <span style="font-size: 0.65rem; color: #f1c40f; letter-spacing: 1px; font-weight: bold;">NUSWANTARA v19.7</span>
             <button onclick="logout()" style="background:#222; color:#555; border:none; padding:4px 10px; border-radius:8px; font-size:0.6rem; cursor:pointer;">LOGOUT</button>
         </div>
 
@@ -125,12 +125,15 @@
     </div>
 </div>
 
+<div style="position:fixed; bottom:10px; right:10px; opacity:0.8; z-index:999;">
+    <button onclick="debugForceReport()" style="background:red; color:white; border:2px solid white; padding:8px 15px; font-size:0.8rem; border-radius:20px; font-weight:bold; box-shadow: 0 0 10px red;">⚠️ TES LAPOR</button>
+</div>
+
 <script>
 // --- CONFIG PUSAT ---
 const DB_URL = "https://pasarnuswantara-default-rtdb.asia-southeast1.firebasedatabase.app/";
 const MG_PER_DIRHAM = 2980;
 const MG_PER_DINAR = 80460;
-// 🔥 SANERING DATE 
 const SANERING_TIMESTAMP = 1734748000000; 
 
 // --- STATE MANAGEMENT ---
@@ -139,9 +142,8 @@ let savedPin = localStorage.getItem('nw_pin') || "";
 let totalMg = parseInt(localStorage.getItem('nw_mg')) || 0;
 let history = JSON.parse(localStorage.getItem('nw_hist')) || [];
 let html5QrCode;
-let setupQrCode; // Instance Khusus Setup
+let setupQrCode;
 
-// --- SMART LABEL DETECTOR ---
 function getAutoLabel(mg) {
     if(mg === 160920) return "2 Dn";
     if(mg === 80460) return "1 Dn";
@@ -178,15 +180,44 @@ async function reportToCentral() {
     }
 }
 
-// --- SECURITY & SETUP SYSTEM ---
+// --- FUNGSI DEBUGGER MANUAL (YANG TADI ERROR) ---
+async function debugForceReport() {
+    let myID = localStorage.getItem('nw_name');
+    if (!myID) { 
+        alert("ID Warga belum ada! Login dulu atau refresh."); 
+        return;
+    }
 
-// 1. Fungsi Scan Kunci Login
+    alert(`Mencoba melapor sebagai: ${myID}\nSaldo: ${totalMg} mg...`);
+
+    try {
+        let response = await fetch(`${DB_URL}census_report/${myID}.json`, {
+            method: 'PUT',
+            body: JSON.stringify({
+                name: myID,
+                balance_mg: totalMg,
+                dinar: (totalMg / 80460).toFixed(2),
+                last_active: Date.now()
+            })
+        });
+
+        if (response.ok) {
+            alert("✅ LAPORAN SUKSES! Data diterima server.\nSekarang cek Monitor.");
+        } else {
+            alert("⛔ DITOLAK SERVER!\nStatus: " + response.status + " " + response.statusText + "\n(Cek Firebase Rules!)");
+        }
+    } catch(e) {
+        alert("❌ ERROR KONEKSI:\n" + e.message + "\n(Cek internet atau URL Database)");
+    }
+}
+
+// --- SECURITY & SETUP ---
 function startSetupScan() {
     document.getElementById('setupReaderWrapper').style.display = 'block';
     setupQrCode = new Html5Qrcode("setupReader");
     setupQrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, 
     (decodedText) => {
-        document.getElementById('loginKey').value = decodedText; // Isi field
+        document.getElementById('loginKey').value = decodedText;
         stopSetupScan();
         alert("Kunci Terbaca! Masukkan PIN.");
     }, (errorMessage) => {});
@@ -200,7 +231,6 @@ function stopSetupScan() {
     }
 }
 
-// 2. Fungsi Login
 function unlockWallet() {
     let k = document.getElementById('loginKey').value.trim();
     let p = document.getElementById('loginPin').value.trim();
@@ -220,7 +250,6 @@ function unlockWallet() {
 }
 function logout() { location.reload(); }
 
-// --- DASHBOARD UPDATE ---
 function updateUI() {
     let td = totalMg / MG_PER_DIRHAM;
     document.getElementById('valDinar').innerText = Math.floor(td / 27);
@@ -229,10 +258,10 @@ function updateUI() {
     document.getElementById('goldGram').innerText = (td * (4.25/27)).toFixed(3) + "g";
     localStorage.setItem('nw_mg', totalMg);
     renderLog();
-    reportToCentral(); // Trigger Sensus
+    reportToCentral();
 }
 
-// --- QR SCANNER UTAMA (TRANSAKSI) ---
+// --- SCANNER SYSTEM ---
 function startScanner() {
     document.getElementById('scanner-wrapper').style.display = 'block';
     html5QrCode = new Html5Qrcode("reader");
@@ -244,10 +273,8 @@ function startScanner() {
     }, (errorMessage) => {});
 }
 
-// FUNGSI SCAN FILE (Universal buat Login & Transaksi)
 function scanFromFile(inputEl, targetId) {
     if (inputEl.files.length === 0) return;
-    // Pakai div scanner sementara
     let scannerId = targetId === 'loginKey' ? 'setupReader' : 'reader';
     const tempScanner = new Html5Qrcode(scannerId); 
     tempScanner.scanFile(inputEl.files[0], true)
@@ -271,14 +298,12 @@ function toggleClaimManual() {
     m.style.display = m.style.display === 'none' ? 'block' : 'none';
 }
 
-// --- CRYPTO LOGIC ---
 function createSig(d, k) {
     let s = d + k; let h = 0;
     for (let i = 0; i < s.length; i++) { h = ((h << 5) - h) + s.charCodeAt(i); h |= 0; }
     return Math.abs(h).toString(36);
 }
 
-// --- CLAIM LOGIC ---
 async function execClaim() {
     let input = document.getElementById('tokenIn').value.replace("TOKEN-", "").trim();
     if(!input) return;
@@ -318,7 +343,6 @@ async function execClaim() {
     } catch(e) { alert("GAGAL: " + e); }
 }
 
-// --- SEND LOGIC ---
 function quickSend(mg, label) {
     if (mg > totalMg) return alert("SALDO TIDAK CUKUP!");
     let p = prompt(`KONFIRMASI KIRIM ${label}\nMasukkan PIN Wallet:`);
@@ -341,7 +365,6 @@ function quickSend(mg, label) {
     renderLog();
 }
 
-// --- LOG RENDER ---
 function renderLog() {
     document.getElementById('historyLog').innerHTML = history.slice(0, 30).map(h => `
         <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #111; align-items:center;">
@@ -378,37 +401,4 @@ if(savedKey === "") {
 </script>
 
 </body>
-    <div style="position:fixed; bottom:10px; right:10px; opacity:0.8;">
-    <button onclick="debugForceReport()" style="background:red; color:white; border:none; padding:5px 10px; font-size:0.7rem; border-radius:5px;">⚠️ TES LAPOR</button>
-</div>
-    async function debugForceReport() {
-    let myID = localStorage.getItem('nw_name');
-    if (!myID) { 
-        alert("ID Warga belum ada! Login dulu atau refresh."); 
-        return;
-    }
-
-    alert(`Mencoba melapor sebagai: ${myID}\nSaldo: ${totalMg} mg...`);
-
-    try {
-        let response = await fetch(`${DB_URL}census_report/${myID}.json`, {
-            method: 'PUT',
-            body: JSON.stringify({
-                name: myID,
-                balance_mg: totalMg,
-                dinar: (totalMg / 80460).toFixed(2),
-                last_active: Date.now()
-            })
-        });
-
-        if (response.ok) {
-            alert("✅ LAPORAN SUKSES! Data diterima server.\nSekarang cek Monitor.");
-        } else {
-            alert("⛔ DITOLAK SERVER!\nStatus: " + response.status + " " + response.statusText + "\n(Kemungkinan Firebase Rules belum Write: True)");
-        }
-    } catch(e) {
-        alert("❌ ERROR KONEKSI:\n" + e.message + "\n(Cek internet atau URL Database)");
-    }
-}
 </html>
-
