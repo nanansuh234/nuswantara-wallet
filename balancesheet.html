@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LIVE PUBLIC LEDGER - NUSWANTARA</title>
+    <title>LIVE PUBLIC LEDGER - NUSWANTARA OS</title>
     <style>
         body { 
             background-color: #050505; 
@@ -24,7 +24,7 @@
             background: #090909; 
             border-radius: 15px; 
             overflow: hidden; 
-            box-shadow: 0 0 80px rgba(0,0,0,0.8);
+            box-shadow: 0 0 80px rgba(212, 175, 55, 0.1);
         }
 
         /* HEADER */
@@ -37,18 +37,45 @@
             align-items: center;
         }
 
-        h1 { margin: 0; font-size: 1.2rem; color: #f1c40f; letter-spacing: 3px; text-transform: uppercase; font-weight: 800; }
+        h1 { margin: 0; font-size: 1.2rem; color: #d4af37; letter-spacing: 3px; text-transform: uppercase; font-weight: 800; }
         .sub-head { font-size: 0.75rem; color: #666; letter-spacing: 1px; }
 
-        .live-indicator {
-            display: flex; align-items: center; gap: 10px; font-size: 0.8rem;
-            color: #2ecc71; font-weight: bold; background: rgba(46, 204, 113, 0.1);
-            padding: 5px 12px; border-radius: 20px; border: 1px solid rgba(46, 204, 113, 0.3);
+        /* JAM NUSWANTARA CUSTOM */
+        .clock-box { text-align: right; }
+        .clock-time {
+            font-size: 1.8rem;
+            color: #d4af37; 
+            font-weight: bold;
+            font-family: monospace;
+            text-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
+            letter-spacing: 2px;
         }
-        .status-dot { height: 8px; width: 8px; background-color: #2ecc71; border-radius: 50%; box-shadow: 0 0 10px #2ecc71; animation: blink 1.5s infinite; }
-        @keyframes blink { 0% {opacity:1;} 50% {opacity:0.4;} 100% {opacity:1;} }
+        .period-badge {
+            font-size: 0.8rem;
+            background: #222;
+            color: #fff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid #444;
+            vertical-align: middle;
+            margin-left: 5px;
+        }
+        .clock-date {
+            font-size: 0.7rem;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+        .clock-fase {
+            font-size: 0.6rem;
+            color: #3498db;
+            letter-spacing: 1px;
+            font-style: italic;
+        }
 
-        /* DASHBOARD SUMMARY (YANG HILANG TADI) */
+        /* DASHBOARD SUMMARY */
         .stats-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -65,7 +92,7 @@
         .stat-val { font-size: 2.5rem; font-weight: bold; margin: 5px 0; }
         .stat-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 2px; color: #666; }
         
-        .gold-txt { color: #f1c40f; text-shadow: 0 0 20px rgba(241, 196, 15, 0.2); }
+        .gold-txt { color: #d4af37; text-shadow: 0 0 20px rgba(241, 196, 15, 0.2); }
         .silver-txt { color: #bdc3c7; text-shadow: 0 0 20px rgba(189, 195, 199, 0.2); }
 
         /* LIST AREA */
@@ -73,7 +100,7 @@
 
         .tx-row {
             display: grid;
-            grid-template-columns: 1.2fr 1.5fr 1.5fr 1fr; 
+            grid-template-columns: 1.5fr 1.5fr 1.5fr 1fr; 
             padding: 15px 30px;
             border-bottom: 1px solid #1a1a1a;
             align-items: center;
@@ -97,8 +124,8 @@
         .tx-id { color: #444; font-size: 0.7rem; cursor: pointer; text-decoration: none; text-align: right; font-family: monospace; }
         .tx-id:hover { color: #888; text-decoration: underline; }
         .time-box { display: flex; flex-direction: column; }
-        .time-main { color: #ccc; font-weight: bold; }
-        .time-sub { color: #555; font-size: 0.75rem; }
+        .time-main { color: #d4af37; font-weight: bold; font-size: 0.85rem; }
+        .time-sub { color: #666; font-size: 0.7rem; font-style: italic; }
         .sender-info { display: block; font-size: 0.65rem; color: #666; margin-top: 4px; font-style: italic; }
 
         ::-webkit-scrollbar { width: 6px; }
@@ -112,27 +139,34 @@
     <div class="header">
         <div>
             <h1>PUBLIC LEDGER</h1>
-            <div class="sub-head">BLOCKCHAIN TRANSPARENCY MONITOR</div>
+            <div class="sub-head">MONITOR KEUANGAN NUSWANTARA</div>
         </div>
-        <div class="live-indicator"><div class="status-dot"></div>SYSTEM LIVE</div>
+        <div class="clock-box">
+            <div class="clock-time">
+                <span id="nusantaraTime">00:00</span>
+                <span id="nusantaraPeriod" class="period-badge">...</span>
+            </div>
+            <div class="clock-date" id="nusantaraDate">...</div>
+            <div class="clock-fase" id="nusantaraFase">...</div>
+        </div>
     </div>
 
     <div class="stats-grid">
         <div class="stat-card">
-            <div class="stat-label">Total Beredar Setara (Emas)</div>
+            <div class="stat-label">Sirkulasi Emas</div>
             <div class="stat-val gold-txt" id="sumDinar">0.00 <span style="font-size:1rem;">Dn</span></div>
         </div>
         <div class="stat-card">
-            <div class="stat-label">Total Beredar Setara (Perak) </div>
+            <div class="stat-label">Sirkulasi Perak</div>
             <div class="stat-val silver-txt" id="sumDirham">0.00 <span style="font-size:1rem;">Dr</span></div>
         </div>
     </div>
 
     <div class="tx-row col-head">
-        <div>TIMESTAMP</div>
+        <div>WAKTU (NUSA)</div>
         <div>JENIS TRANSAKSI</div>
         <div>NOMINAL</div>
-        <div style="text-align:right;">TX ID</div>
+        <div style="text-align:right;">ID TRANSAKSI</div>
     </div>
 
     <div id="ledgerList">
@@ -145,29 +179,105 @@
     const MG_PER_DINAR = 80460;
     const MG_PER_DIRHAM = 2980;
 
+    // --- KAMUS NUSWANTARA OS ---
+    const MONTHS_NUSA = ["Wiwitan", "Gangga", "Bija", "Trubus", "Teja", "Baskara", "Kartika", "Huma", "Phala", "Lumbung", "Reswara", "Purnaka", "Suwung"];
+    const PASARAN = ["Legi", "Pahing", "Pon", "Wage", "Kliwon"];
+    const DAYS_NUSA = ["Radite", "Soma", "Anggara", "Buda", "Respati", "Sukra", "Tumpek"]; // Minggu - Sabtu
+    
+    const PHASE_DB = [
+        { id: 7, name: "ISTIWA" }, { id: 8, name: "ASAR" },
+        { id: 1, name: "SANDIKALA" }, { id: 2, name: "SIREPAN" },
+        { id: 3, name: "HENING" }, { id: 4, name: "FAJAR" },
+        { id: 5, name: "DUHA" }, { id: 6, name: "KARYA" }
+    ];
+
+    // --- LOGIKA KONVERSI WAKTU ---
+    function convertToNusantaraTime(dateObj) {
+        const h = dateObj.getHours();
+        const m = dateObj.getMinutes();
+        const s = dateObj.getSeconds();
+
+        let mTotalMin = ((h % 12) * 60) + m + (s/60);
+        let nTotalHours = mTotalMin / 90; 
+        
+        let dHour = Math.floor(nTotalHours) || 8;
+        let dMin = Math.floor((nTotalHours % 1) * 90);
+        
+        let period = (h >= 6 && h < 18) ? "SIANG" : "MALAM";
+
+        const phaseSequence = [3, 4, 5, 6, 7, 8, 1, 2];
+        let seqIdx = Math.floor(h / 3);
+        let currentPhase = PHASE_DB.find(p => p.id === phaseSequence[seqIdx]);
+
+        return {
+            timeStr: `${String(dHour).padStart(2, '0')}:${String(dMin).padStart(2, '0')}`,
+            period: period,
+            fase: currentPhase.name
+        };
+    }
+
+    // --- LOGIKA KONVERSI KALENDER ---
+    function convertToNusantaraDate(dateObj) {
+        let yr = dateObj.getFullYear();
+        let anchor = new Date(yr, 2, 21);
+        if (dateObj < anchor) { anchor = new Date(yr - 1, 2, 21); yr--; }
+
+        let diff = Math.floor((dateObj - anchor) / 86400000);
+        let nMonthIdx = Math.floor(diff / 28);
+        let nDay = (diff % 28) + 1;
+        let nYear = yr - 2024; 
+        
+        let totalDays = Math.floor((dateObj - new Date(2025, 2, 21)) / 86400000);
+        let pIdx = (2 + (totalDays % 5)) % 5; 
+        if (pIdx < 0) pIdx += 5;
+
+        // Ambil Nama Hari (0=Minggu -> Radite)
+        let dayIdx = dateObj.getDay();
+
+        return {
+            day: nDay,
+            month: MONTHS_NUSA[nMonthIdx] || "Suwung",
+            year: String(nYear).padStart(3, '0'),
+            pasaran: PASARAN[pIdx],
+            dayName: DAYS_NUSA[dayIdx] // Nama Hari Baru
+        };
+    }
+
+    // --- UPDATE JAM BERJALAN ---
+    function updateClock() {
+        const now = new Date();
+        const nTime = convertToNusantaraTime(now);
+        const nDate = convertToNusantaraDate(now);
+        
+        document.getElementById('nusantaraTime').innerText = nTime.timeStr;
+        document.getElementById('nusantaraPeriod').innerText = nTime.period;
+        
+        // UPDATE FORMAT TANGGAL DI POJOK ATAS
+        document.getElementById('nusantaraDate').innerText = `${nDate.dayName}, ${nDate.day} ${nDate.month} ${nDate.year} | ${nDate.pasaran}`;
+        document.getElementById('nusantaraFase').innerText = `FASE: ${nTime.fase}`;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // --- FETCH DATA ---
     async function fetchAllData() {
         let bust = "?r=" + Date.now();
-        
         try {
-            // 1. FETCH TOTAL SUPPLY (SUM)
             let resStats = await fetch(`${DB_URL}market_stats.json${bust}`);
             let stats = await resStats.json();
             let totalMg = (stats && stats.total_supply_mg) ? parseInt(stats.total_supply_mg) : 0;
             
-            // Konversi ke Dinar/Dirham Display
             let dinar = (totalMg / MG_PER_DINAR).toFixed(2);
             let dirham = (totalMg / MG_PER_DIRHAM).toFixed(2);
             
-            // Animasi angka (sedikit efek)
             document.getElementById('sumDinar').innerHTML = `${dinar} <span style="font-size:1rem;">Dn</span>`;
             document.getElementById('sumDirham').innerHTML = `${dirham} <span style="font-size:1rem;">Dr</span>`;
 
-            // 2. FETCH TRANSAKSI (LIST)
             let resLedger = await fetch(`${DB_URL}public_ledger.json?orderBy="$key"&limitToLast=50`);
             let data = await resLedger.json();
             
             if(!data) {
-                document.getElementById('ledgerList').innerHTML = '<div style="padding:50px; text-align:center; color:#444;">Belum ada catatan transaksi publik.</div>';
+                document.getElementById('ledgerList').innerHTML = '<div style="padding:50px; text-align:center; color:#333;">Belum ada catatan transaksi publik.</div>';
                 return;
             }
 
@@ -175,28 +285,36 @@
             
             let html = logs.map(log => {
                 let dateObj = new Date(log.timestamp);
-                let timeStr = dateObj.toLocaleTimeString('id-ID');
-                let dateStr = dateObj.toLocaleDateString('id-ID');
+                
+                let nTime = convertToNusantaraTime(dateObj);
+                let nDate = convertToNusantaraDate(dateObj);
+                
+                // Di list transaksi, kita pakai format ringkas
+                let displayDate = `${nDate.dayName}, ${nDate.day} ${nDate.month} ${nDate.year}`;
+                let displayTime = `${nTime.timeStr} ${nTime.period}`;
                 
                 let isMint = log.type === 'MINT';
                 let isBurn = log.type === 'BURN';
                 let typeBadge, valClass, valStr, senderHtml = "";
 
                 if (isMint) {
-                    typeBadge = `<span class="badge type-mint">CETAK (MINT)</span>`; valClass = 'val-plus'; valStr = `+ ${log.label}`;
-                    senderHtml = `<span class="sender-info">Issuer: BANK SENTRAL</span>`;
+                    typeBadge = `<span class="badge type-mint">CETAK</span>`; valClass = 'val-plus'; valStr = `+ ${log.label}`;
+                    senderHtml = `<span class="sender-info">Oleh: BANK SENTRAL</span>`;
                 } else if (isBurn) {
-                    typeBadge = `<span class="badge type-burn">BAKAR (BURN)</span>`; valClass = 'val-min'; 
+                    typeBadge = `<span class="badge type-burn">LEBUR</span>`; valClass = 'val-min'; 
                     valStr = log.label; if(!valStr.includes("-")) valStr = "- " + valStr;
-                    senderHtml = `<span class="sender-info">To: BANK SENTRAL</span>`;
+                    senderHtml = `<span class="sender-info">Ke: BANK SENTRAL</span>`;
                 } else {
-                    typeBadge = `<span class="badge type-transfer">TRANSFER (P2P)</span>`; valClass = 'val-neutral'; valStr = `> ${log.label}`;
-                    let sender = log.sender || "ANONIM"; senderHtml = `<span class="sender-info">From: ${sender}</span>`;
+                    typeBadge = `<span class="badge type-transfer">KIRIM</span>`; valClass = 'val-neutral'; valStr = `> ${log.label}`;
+                    let sender = log.sender || "ANONIM"; senderHtml = `<span class="sender-info">Dari: ${sender}</span>`;
                 }
 
                 return `
                     <div class="tx-row">
-                        <div class="time-box"><span class="time-main">${timeStr}</span><span class="time-sub">${dateStr}</span></div>
+                        <div class="time-box">
+                            <span class="time-main">${displayDate}</span>
+                            <span class="time-sub">${displayTime}</span>
+                        </div>
                         <div>${typeBadge}${senderHtml}</div>
                         <div class="${valClass}">${valStr}</div>
                         <div class="tx-id" onclick="copy('${log.tx_id}')" title="Salin ID">#${log.tx_id.substring(0, 8)}...</div>
@@ -211,7 +329,6 @@
 
     function copy(text) { navigator.clipboard.writeText(text); alert("ID Disalin: " + text); }
 
-    // Refresh 3 Detik
     setInterval(fetchAllData, 3000);
     fetchAllData(); 
 </script>
