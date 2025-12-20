@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VALIDATOR v4.1 (OFFLINE FRIENDLY)</title>
+    <title>VALIDATOR PINTAR v4.3</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        body { background: #080808; color: #eee; font-family: 'Segoe UI', sans-serif; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; }
+        body { background: #050505; color: #eee; font-family: 'Segoe UI', sans-serif; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; }
         .box { width: 100%; max-width: 480px; border: 1px solid #333; padding: 20px; border-radius: 15px; background: #111; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.6); }
         h2 { text-align: center; margin-top: 0; letter-spacing: 2px; color: #f1c40f; border-bottom: 1px solid #333; padding-bottom: 10px; }
         
@@ -20,11 +20,15 @@
         #resultBox { display: none; text-align: center; padding: 20px; border-radius: 12px; margin-top: 20px; border: 2px solid; animation: pop 0.3s; }
         @keyframes pop { from{transform:scale(0.9); opacity:0;} to{transform:scale(1); opacity:1;} }
         
-        /* WARNA STATUS BARU */
-        .valid { border-color: #2ecc71; background: rgba(46, 204, 113, 0.1); color: #2ecc71; } /* ONLINE */
-        .offline-valid { border-color: #3498db; background: rgba(52, 152, 219, 0.1); color: #3498db; } /* OFFLINE - AMAN */
-        .fake { border-color: #e74c3c; background: rgba(231, 76, 60, 0.1); color: #e74c3c; } /* PALSU */
-        .used { border-color: #f39c12; background: rgba(241, 196, 15, 0.1); color: #f39c12; } /* BEKAS */
+        /* WARNA STATUS */
+        .circulating { border-color: #2ecc71; background: rgba(46, 204, 113, 0.1); color: #2ecc71; }
+        .unregistered { border-color: #3498db; background: rgba(52, 152, 219, 0.1); color: #3498db; }
+        .fake { border-color: #e74c3c; background: rgba(231, 76, 60, 0.1); color: #e74c3c; }
+        .used { border-color: #f39c12; background: rgba(241, 196, 15, 0.1); color: #f39c12; }
+
+        /* TEXT GAYA */
+        .big-val { font-size: 1.8rem; margin: 5px 0; font-weight: bold; }
+        .smart-lbl { font-size: 1.1rem; color: #fff; background: rgba(255,255,255,0.1); padding: 5px 10px; border-radius: 5px; margin-bottom: 10px; display: inline-block; }
 
         #readerKey, #readerToken { width: 100%; border-radius: 10px; overflow: hidden; display: none; margin-bottom: 15px; border: 2px solid #555; }
         
@@ -36,10 +40,10 @@
 <body>
 
     <div class="box">
-        <h2>🔍 DETEKTOR UANG v4.1</h2>
+        <h2>🔍 VALIDATOR v4.3</h2>
         
         <div id="setupArea">
-            <p style="text-align:center; color:#aaa; font-size:0.8rem;">LANGKAH 1: Masukkan Kunci Otoritas</p>
+            <p style="text-align:center; color:#aaa; font-size:0.8rem;">SETUP: Masukkan Kunci Otoritas</p>
             <div id="readerKey"></div>
             <button onclick="startScan('KEY')" class="btn-key">📷 SCAN KUNCI</button>
             <label class="file-upload">📂 UPLOAD QR KUNCI <input type="file" accept="image/*" onchange="scanFromFile(this, 'KEY')" style="display:none;"></label>
@@ -59,23 +63,19 @@
     <div id="resultBox"></div>
 
     <div class="box" style="margin-top:0;">
-        <h3 style="font-size:0.9rem; color:#888; text-transform:uppercase; margin-top:0;">📖 Arti Warna</h3>
+        <h3 style="font-size:0.9rem; color:#888; text-transform:uppercase; margin-top:0;">📋 SOP STATUS</h3>
         <div class="legend-box">
             <div class="legend-item">
                 <div class="dot" style="background:#2ecc71;"></div>
-                <div><strong style="color:#2ecc71;">HIJAU (TERVERIFIKASI)</strong><br>Asli & Data sinkron dengan Cloud.</div>
+                <div><strong style="color:#2ecc71;">HIJAU (SIRKULASI)</strong><br>Asli & Terdaftar Cloud. <b>Terima.</b></div>
             </div>
             <div class="legend-item">
                 <div class="dot" style="background:#3498db;"></div>
-                <div><strong style="color:#3498db;">BIRU (VALID OFFLINE)</strong><br>Uang ASLI secara kriptografi, tapi belum lapor Cloud (Pembuat Offline). <b>AMAN DITERIMA.</b></div>
-            </div>
-            <div class="legend-item">
-                <div class="dot" style="background:#f39c12;"></div>
-                <div><strong style="color:#f39c12;">ORANYE (BEKAS)</strong><br>Asli tapi saldo sudah ditarik. TOLAK.</div>
+                <div><strong style="color:#3498db;">BIRU (OFFLINE/BARU)</strong><br>Asli tapi belum lapor Cloud. <b>Cek Fisik lalu Terima.</b></div>
             </div>
             <div class="legend-item">
                 <div class="dot" style="background:#e74c3c;"></div>
-                <div><strong style="color:#e74c3c;">MERAH (PALSU)</strong><br>Tanda tangan digital salah. TOLAK.</div>
+                <div><strong style="color:#e74c3c;">MERAH (PALSU)</strong><br>Tanda tangan salah. <b>Tolak & Sita.</b></div>
             </div>
         </div>
     </div>
@@ -84,6 +84,28 @@
     const DB_URL = "https://pasarnuswantara-default-rtdb.asia-southeast1.firebasedatabase.app/";
     let html5QrCode;
     let ACTIVE_KEY = "";
+
+    // --- FUNGSI SMART LABEL (PENERJEMAH ANGKA) ---
+    function getSmartLabel(mg) {
+        mg = parseInt(mg);
+        // Emas (Dinar)
+        if(mg === 160920) return "2 Dinar (Au)";
+        if(mg === 80460) return "1 Dinar (Au)";
+        if(mg === 40230) return "1/2 Dinar (Au)";
+        if(mg === 20115) return "1/4 Dinar (Au)";
+        
+        // Perak (Dirham)
+        if(mg === 14900) return "5 Dirham (Ag)";
+        if(mg === 5960) return "2 Dirham (Ag)";
+        if(mg === 2980) return "1 Dirham (Ag)";
+        if(mg === 2235) return "3/4 Dirham (Ag)";
+        if(mg === 1490) return "1/2 Dirham (Ag)";
+        if(mg === 745) return "1/4 Dirham (Ag)";
+        
+        // Kustom / Ganjil
+        if(mg >= 80460) return (mg/80460).toFixed(3) + " Dinar";
+        return (mg/2980).toFixed(2) + " Dirham";
+    }
 
     function scanFromFile(inputEl, mode) {
         if (inputEl.files.length === 0) return;
@@ -135,23 +157,24 @@
 
         resBox.style.display = 'block';
         resBox.className = "box";
-        resBox.innerHTML = "⏳ MENGHUBUNGKAN...";
+        resBox.innerHTML = "⏳ MENERJEMAHKAN TOKEN...";
         resBox.style.borderColor = "#555"; resBox.style.color = "#aaa";
 
         try {
-            // 1. CEK MATEMATIKA (UTAMA)
+            // 1. CEK MATEMATIKA
             let cleanToken = raw.replace("TOKEN-", "");
             let decoded = atob(cleanToken);
             let [payload, sig] = decoded.split("|");
             
             let calcSig = createSig(payload, ACTIVE_KEY);
             if (calcSig !== sig) {
-                return showResult("FAKE", "⛔ PALSU", "Tanda tangan digital SALAH. Ini uang palsu.");
+                return showResult("FAKE", "⛔ PALSU", "Signature Salah. Uang Tidak Valid.");
             }
 
-            // 2. CEK DATABASE (CLOUD)
+            // 2. CEK DATABASE
             let [val, time, nonce] = payload.split(":");
             let nominalDn = (val / 80460).toFixed(4);
+            let smartLabel = getSmartLabel(val); // <--- INI FITUR BARUNYA
 
             let [regReq, usedReq] = await Promise.all([
                 fetch(`${DB_URL}issued_tokens/${nonce}.json`),
@@ -160,24 +183,26 @@
             let regData = await regReq.json();
             let usedData = await usedReq.json();
 
-            // A. CEK APAKAH SUDAH DIPAKAI? (CRITICAL)
+            // A. SUDAH DIPAKAI?
             if (usedData) {
-                return showResult("USED", "⚠️ SUDAH DIPAKAI", `Asli tapi Saldo 0.<br><small>Dipakai: ${new Date(usedData.at).toLocaleString()}</small>`);
+                return showResult("USED", "⚠️ SUDAH DIPAKAI", 
+                    `<div class="big-val">${nominalDn} Dn</div>
+                     <div class="smart-lbl">${smartLabel}</div><br>
+                     <small>Dicairkan: ${new Date(usedData.at).toLocaleString()}</small>`);
             }
 
-            // B. CEK APAKAH TERDAFTAR DI BUKU INDUK? (SECONDARY)
+            // B. ADA DI CLOUD?
             if (regData) {
-                // KASUS: HIJAU (Online & Terdaftar)
-                showResult("VALID", "✅ VALID (TERVERIFIKASI)", 
-                    `<div style="font-size:1.5rem; margin:10px 0;">${nominalDn} Dn</div>
-                    <small>Issuer: ${regData.issuer}</small><br><small>Status: Sync Cloud OK</small>`);
+                showResult("CIRCULATING", "✅ VALID (SIRKULASI)", 
+                    `<div class="big-val">${nominalDn} Dn</div>
+                     <div class="smart-lbl">${smartLabel}</div><br>
+                     <small>Issuer: ${regData.issuer || "Wallet Warga"}</small>`);
             } else {
-                // KASUS: BIRU (Asli tapi Offline)
-                // INI FIX-NYA! JANGAN DIBILANG PALSU!
-                showResult("OFFLINE-VALID", "ℹ️ VALID (MODE OFFLINE)", 
-                    `<div style="font-size:1.5rem; margin:10px 0;">${nominalDn} Dn</div>
-                    <small>Uang ini ASLI secara kriptografi.</small><br>
-                    <small style="color:#aaa;">Catatan: Pembuat token sedang offline saat mengirim.</small>`);
+                showResult("UNREGISTERED", "ℹ️ VALID (OFFLINE/BARU)", 
+                    `<div class="big-val">${nominalDn} Dn</div>
+                     <div class="smart-lbl">${smartLabel}</div><br>
+                     <small>Signature: ASLI (Valid)</small><br>
+                     <small style="color:#f1c40f;">Belum masuk database Cloud. "Wajib kroscek settlement fisik" </small>`);
             }
 
         } catch (e) {
@@ -185,10 +210,10 @@
         }
     }
 
-    function showResult(type, title, desc) {
+    function showResult(type, title, htmlContent) {
         let b = document.getElementById('resultBox');
         b.className = "box " + type.toLowerCase();
-        b.innerHTML = `<h2 style="margin-top:0; border:none;">${title}</h2><p>${desc}</p>`;
+        b.innerHTML = `<h2 style="margin-top:0; border:none;">${title}</h2>${htmlContent}`;
     }
 
     function createSig(d, k) {
