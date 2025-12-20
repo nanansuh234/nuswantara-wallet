@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PANDUAN - Nuswantara Wallet</title>
+    <style>
+        :root {
+            --bg: #050505;
+            --card-bg: #111;
+            --text-main: #e0e0e0;
+            --gold: #f1c40f;
+            --blue: #3498db;
+            --green: #2ecc71;
+            --red: #e74c3c;
+            --border: #333;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            margin: 0; padding: 0; line-height: 1.6;
+        }
+
+        /* NAVBAR */
+        .navbar {
+            position: sticky; top: 0; z-index: 1000;
+            background: rgba(5, 5, 5, 0.95); backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--gold); padding: 10px 20px;
+            display: flex; justify-content: center;
+        }
+        .nav-menu { display: flex; gap: 10px; overflow-x: auto; white-space: nowrap; max-width: 1000px; padding-bottom:5px; }
+        .nav-item {
+            text-decoration: none; color: #fff; font-size: 0.8rem; font-weight: bold;
+            padding: 8px 15px; border: 1px solid var(--border); border-radius: 20px;
+            background: #1a1a1a; transition: 0.2s; display: flex; align-items: center; gap: 5px;
+        }
+        .nav-item:hover { background: var(--gold); color: #000; border-color: var(--gold); transform: translateY(-2px); }
+
+        .container { max-width: 800px; margin: 0 auto; padding: 40px 20px; }
+
+        h1 { text-align: center; color: var(--gold); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 40px; }
+        h2 { border-bottom: 1px solid var(--border); padding-bottom: 10px; color: #fff; margin-top: 50px; }
+        
+        /* TUTORIAL STEPS */
+        .step-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            position: relative;
+            overflow: hidden;
+        }
+        .step-number {
+            position: absolute; top: -10px; right: -10px;
+            background: rgba(241, 196, 15, 0.1); color: var(--gold);
+            font-size: 4rem; font-weight: bold; opacity: 0.3;
+            pointer-events: none;
+        }
+        .step-title { font-size: 1.2rem; font-weight: bold; color: var(--gold); margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
+        
+        /* MOCKUP UI (Visualisasi Tombol) */
+        .mockup-btn {
+            display: inline-block; padding: 5px 12px; border-radius: 5px;
+            font-size: 0.7rem; font-weight: bold; font-family: monospace;
+            border: 1px solid #555; margin: 0 3px; vertical-align: middle;
+        }
+        .m-blue { background: var(--blue); color: white; border:none; }
+        .m-gold { background: var(--gold); color: black; border:none; }
+        .m-dark { background: #333; color: #aaa; border: 1px dashed #666; }
+
+        /* ALERT BOX */
+        .tip-box {
+            background: rgba(52, 152, 219, 0.1); border-left: 4px solid var(--blue);
+            padding: 15px; margin-top: 15px; font-size: 0.9rem; color: #ccc;
+        }
+        
+        /* IMAGE PLACEHOLDER */
+        .img-instruction {
+            width: 100%; border-radius: 10px; border: 2px dashed #444;
+            background: #000; padding: 20px; text-align: center;
+            color: #666; font-size: 0.8rem; margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="nav-menu">
+        <a href="https://nanansuh234.github.io/nuswantara-wallet/" class="nav-item">📱 Saku Kuring</a>
+        <a href="https://nanansuh234.github.io/nuswantara-wallet/panduan.html" class="nav-item">ℹ️ Info System</a>
+        <a href="https://nanansuh234.github.io/nuswantara-wallet/moneterindikator.html" class="nav-item">📊 Edaran Cicis</a>
+    </div>
+</nav>
+
+<div class="container">
+    <h1>Panduan Penggunaan</h1>
+
+    <h2>1. SETUP WALLET (PERTAMA KALI)</h2>
+    
+    <div class="step-card">
+        <div class="step-number">01</div>
+        <div class="step-title">🔑 Miliki Kunci (Private Key)</div>
+        <p>Sistem ini tidak menggunakan Email/Password. Identitas Anda adalah sebuah <strong>QR Code (Private Key)</strong>.</p>
+        <p>
+            1. Klik menu <span class="mockup-btn m-dark">🔑 Download Konci</span> di bagian atas.<br>
+            2. Simpan gambar <code>private key.png</code> tersebut di tempat AMAN (Galeri Tersembunyi/Flashdisk).<br>
+            3. <strong>PENTING:</strong> Siapa yang punya gambar ini, bisa mengakses uang Anda. Jangan disebar!
+        </p>
+    </div>
+
+    <div class="step-card">
+        <div class="step-number">02</div>
+        <div class="step-title">🔓 Cara Login / Buka Wallet</div>
+        <p>Saat pertama kali membuka aplikasi, Anda akan melihat layar terkunci.</p>
+        <div class="img-instruction">
+            [ILUSTRASI: Layar Login]<br><br>
+            Klik Tombol <span class="mockup-btn m-dark">📂 UPLOAD QR KUNCI</span><br>
+            Pilih gambar Key yang tadi di-download.
+        </div>
+        <p>Atau jika Anda punya print-out fisik, klik <span class="mockup-btn m-blue">📷 SCAN KUNCI</span> dan arahkan kamera ke kertas QR.</p>
+    </div>
+
+    <h2>2. CARA MENERIMA & SCAN QR</h2>
+
+    <div class="step-card">
+        <div class="step-number">03</div>
+        <div class="step-title">📷 Scan Langsung (Kamera)</div>
+        <p>Jika teman Anda menyodorkan HP-nya yang berisi QR Code Dinar/Dirham:</p>
+        <ol>
+            <li>Buka Wallet Anda.</li>
+            <li>Klik tombol <span class="mockup-btn m-blue">📷 SCAN QR</span>.</li>
+            <li>Arahkan kamera ke layar HP teman.</li>
+            <li>Saldo otomatis bertambah!</li>
+        </ol>
+    </div>
+
+    <div class="step-card">
+        <div class="step-number">04</div>
+        <div class="step-title">📂 Scan via Gambar (Jarak Jauh)</div>
+        <p>Bagaimana jika teman mengirim QR lewat WhatsApp/Telegram?</p>
+        <div class="tip-box">
+            💡 <strong>FITUR CANGGIH:</strong> Anda tidak perlu dua HP untuk scan!
+        </div>
+        <ol>
+            <li>Simpan gambar QR yang dikirim teman ke Galeri HP.</li>
+            <li>Di Wallet, klik tombol <span class="mockup-btn m-blue">📷 SCAN QR</span>.</li>
+            <li>Lihat di bagian bawah kamera, ada tombol kecil:<br>
+                <span class="mockup-btn m-dark">📂 UPLOAD FOTO QR</span></li>
+            <li>Pilih gambar dari Galeri. Sistem akan membacanya otomatis.</li>
+        </ol>
+    </div>
+
+    <h2>3. CARA KIRIM / BAYAR</h2>
+
+    <div class="step-card">
+        <div class="step-number">05</div>
+        <div class="step-title">💸 Mengirim Aset</div>
+        <p>1. Pastikan saldo cukup.<br>
+        2. Pilih nominal di menu <strong>"KIRIM CEPAT"</strong> (Misal: <span class="mockup-btn m-gold">1 Dn</span> atau <span class="mockup-btn m-dark">1 Dr</span>).<br>
+        3. Masukkan <strong>PIN</strong> Anda (Default saat setup awal).<br>
+        4. Akan muncul <strong>QR Code Besar</strong>.</p>
+        
+        <div class="img-instruction">
+            [QR Code Muncul di Layar]
+        </div>
+        
+        <p><strong>PILIHAN PENGIRIMAN:</strong><br>
+        A. Minta teman scan layar HP Anda sekarang.<br>
+        B. Screenshot layar tersebut, lalu kirim gambarnya via WA ke teman (untuk transaksi jarak jauh).</p>
+    </div>
+
+    <h2>4. CARA REDEEM (PENCAIRAN)</h2>
+
+    <div class="step-card">
+        <div class="step-number">06</div>
+        <div class="step-title">🏦 Tukar ke Fisik</div>
+        <p>Ingin mengubah saldo digital kembali menjadi Emas/Perak fisik?</p>
+        <ol>
+            <li>Datang ke Kantor Cabang / Agen Nuswantara (Bank Sentral).</li>
+            <li>Buka Wallet, buat transaksi kirim sejumlah yang ingin ditarik.</li>
+            <li>Tunjukkan QR Code ke Petugas (Teller).</li>
+            <li>Petugas akan melakukan <strong>"BURN"</strong> (Pemusnahan Saldo Digital).</li>
+            <li>Petugas menyerahkan koin fisik Emas/Perak kepada Anda.</li>
+        </ol>
+        <div class="tip-box" style="border-color: var(--red); background: rgba(231,76,60,0.1);">
+            ⛔ <strong>PERINGATAN:</strong> QR Code yang sudah di-scan oleh Petugas (Burned) tidak bisa digunakan lagi. Saldo digital hilang, berganti jadi fisik.
+        </div>
+    </div>
+
+    <div style="text-align:center; margin-top:50px; color:#555; font-size:0.8rem;">
+        <p>Tutorial Nuswantara v1.0<br>Panduan ini dapat berubah sesuai update sistem.</p>
+    </div>
+
+</div>
+
+</body>
+</html>
