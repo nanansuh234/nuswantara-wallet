@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nuswantara Wallet v20.0</title>
+    <title>Nuswantara Wallet v20.3</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
@@ -12,9 +12,11 @@
         .btn-action:active { transform: scale(0.95); }
         .file-btn { background: #333; color: #aaa; border: 1px dashed #555; padding: 10px; width: 100%; border-radius: 10px; margin-top: 10px; cursor: pointer; font-size: 0.8rem; display:block; box-sizing:border-box; text-align:center;}
         .btn-scan-key { width:100%; padding:15px; background:#3498db; color:white; border:none; border-radius:12px; font-weight:bold; font-size: 1rem; margin-bottom:10px; cursor:pointer; }
-        
         #paymentModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:2000; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding:20px; box-sizing:border-box; }
         .pay-card { background:#1a1a1a; padding:30px; border-radius:20px; border:2px solid #f1c40f; width:100%; max-width:400px; }
+        
+        /* ID BADGE STATIC (GAK BISA DIKLIK) */
+        .id-badge { background: #000; color: #aaa; padding: 5px 10px; border-radius: 5px; font-size: 0.65rem; margin-top: 5px; border: 1px solid #333; display: inline-block; font-family: monospace; letter-spacing: 1px; }
     </style>
 </head>
 <body>
@@ -40,7 +42,10 @@
 
     <div id="walletPanel" style="display:none;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <span style="font-size: 0.65rem; color: #f1c40f; letter-spacing: 1px; font-weight: bold;">NUSWANTARA v20.0</span>
+            <div style="text-align:left;">
+                <span style="font-size: 0.65rem; color: #f1c40f; letter-spacing: 1px; font-weight: bold;">NUSWANTARA v20.3</span><br>
+                <div id="myIDDisplay" class="id-badge">ID: ...</div>
+            </div>
             <button onclick="logout()" style="background:#222; color:#555; border:none; padding:4px 10px; border-radius:8px; font-size:0.6rem; cursor:pointer;">LOGOUT</button>
         </div>
 
@@ -136,12 +141,21 @@ let savedKey = localStorage.getItem('nw_key') || "";
 let savedPin = localStorage.getItem('nw_pin') || "";
 let totalMg = parseInt(localStorage.getItem('nw_mg')) || 0;
 let history = JSON.parse(localStorage.getItem('nw_hist')) || [];
+let myID = localStorage.getItem('nw_name'); // Ambil ID yang tersimpan
 let html5QrCode;
 let setupQrCode;
 
 const urlParams = new URLSearchParams(window.location.search);
 let payAmount = urlParams.get('pay');
 let payTo = urlParams.get('to');
+
+// --- AUTO GENERATE ID (HANYA SEKALI SEUMUR HIDUP WALLET) ---
+if (savedKey && !myID) {
+    // Generate kode unik acak
+    let randomCode = Math.random().toString(36).substring(2, 7).toUpperCase();
+    myID = "WARGA-" + randomCode;
+    localStorage.setItem('nw_name', myID); // Simpan Permanen
+}
 
 if(savedKey === "") {
     document.getElementById('lockScreen').style.display = "block";
@@ -165,18 +179,15 @@ async function processPayment() {
 
     totalMg -= parseInt(payAmount);
     const nonce = "W-" + Math.random().toString(36).substring(2, 7).toUpperCase();
-    const payload = `${payAmount}:${Date.now()}:${nonce}`;
-    const token = "TOKEN-" + btoa(payload + "|" + createSig(payload, savedKey));
+    const token = "TOKEN-" + btoa(`${payAmount}:${Date.now()}:${nonce}` + "|" + createSig(`${payAmount}:${Date.now()}:${nonce}`, savedKey));
 
     alert("Mengirim Pembayaran...");
     try {
         await fetch(`${DB_URL}inbox/${payTo}.json`, { method: 'POST', body: JSON.stringify(token) });
-        
         let label = (payAmount/2980).toFixed(2) + " Dr";
-        let senderName = localStorage.getItem('nw_name') || "ANON-WALLET";
         await fetch(`${DB_URL}public_ledger/${nonce}.json`, { 
              method: 'PUT', 
-             body: JSON.stringify({ type: 'TRANSFER', label: label, val: parseInt(payAmount), timestamp: Date.now(), tx_id: nonce, sender: senderName }) 
+             body: JSON.stringify({ type: 'TRANSFER', label: label, val: parseInt(payAmount), timestamp: Date.now(), tx_id: nonce, sender: myID }) 
         });
 
         history.unshift({ t: 'KELUAR (MERCHANT)', label: label, raw: token, time: new Date().toLocaleTimeString() });
@@ -200,11 +211,6 @@ function getAutoLabel(mg) {
 }
 
 async function reportToCentral() {
-    let myID = localStorage.getItem('nw_name');
-    if (!myID && savedKey) {
-        myID = "WARGA-" + savedKey.substring(savedKey.length - 5).toUpperCase(); 
-        localStorage.setItem('nw_name', myID);
-    }
     if(myID) {
         try {
             await fetch(`${DB_URL}census_report/${myID}.json`, {
@@ -241,6 +247,7 @@ function unlockWallet() {
 function logout() { location.reload(); }
 
 function updateUI() {
+    document.getElementById('myIDDisplay').innerText = myID; // Tampilkan ID Permanen
     let td = totalMg / MG_PER_DIRHAM;
     document.getElementById('valDinar').innerText = Math.floor(td / 27);
     document.getElementById('valDirham').innerText = (td % 27).toFixed(2);
@@ -302,18 +309,12 @@ async function quickSend(mg, label) {
     if(p !== savedPin) return alert("PIN SALAH!");
     totalMg -= mg;
     const nonce = "W-" + Math.random().toString(36).substring(2, 7).toUpperCase();
-    const payload = `${mg}:${Date.now()}:${nonce}`;
-    const token = "TOKEN-" + btoa(payload + "|" + createSig(payload, savedKey));
+    const token = "TOKEN-" + btoa(`${payAmount}:${Date.now()}:${nonce}` + "|" + createSig(`${payAmount}:${Date.now()}:${nonce}`, savedKey));
     
-    let senderName = localStorage.getItem('nw_name') || "ANON-WALLET";
-
-    fetch(`${DB_URL}issued_tokens/${nonce}.json`, {
-        method: 'PUT', body: JSON.stringify({ issuer: senderName, amount: mg, created_at: Date.now() })
-    });
-
+    fetch(`${DB_URL}issued_tokens/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ issuer: myID, amount: mg, created_at: Date.now() }) });
     fetch(`${DB_URL}public_ledger/${nonce}.json`, { 
              method: 'PUT', 
-             body: JSON.stringify({ type: 'TRANSFER', label: label, val: mg, timestamp: Date.now(), tx_id: nonce, sender: senderName }) 
+             body: JSON.stringify({ type: 'TRANSFER', label: label, val: mg, timestamp: Date.now(), tx_id: nonce, sender: myID }) 
     });
 
     updateUI();
