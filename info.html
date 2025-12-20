@@ -16,7 +16,7 @@
             --red: #e74c3c;
             --border: #333;
             
-            /* VAR JAM ANALOG WIDGET */
+            /* VAR JAM WIDGET */
             --tick: #ffffff;
             --color-8-2: rgba(255, 215, 0, 0.25);
             --color-2-4: rgba(255, 69, 0, 0.25);
@@ -28,12 +28,10 @@
             background-color: var(--bg);
             color: var(--text-main);
             font-family: 'Segoe UI', system-ui, sans-serif;
-            margin: 0;
-            padding: 0;
-            line-height: 1.6;
+            margin: 0; padding: 0; line-height: 1.6;
         }
 
-        /* --- NAVIGATION BAR --- */
+        /* --- NAVBAR --- */
         .navbar {
             position: sticky; top: 0; z-index: 1000;
             background: rgba(5, 5, 5, 0.95); backdrop-filter: blur(10px);
@@ -44,7 +42,6 @@
         .nav-menu { display: flex; gap: 10px; overflow-x: auto; white-space: nowrap; max-width: 1000px; padding-bottom: 5px; }
         .nav-menu::-webkit-scrollbar { height: 4px; }
         .nav-menu::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 2px; }
-        
         .nav-item {
             text-decoration: none; color: #fff; font-size: 0.8rem; font-weight: bold;
             padding: 8px 15px; border: 1px solid var(--border); border-radius: 20px;
@@ -52,27 +49,24 @@
         }
         .nav-item:hover { background: var(--gold); color: #000; border-color: var(--gold); transform: translateY(-2px); }
 
-        /* --- MAIN LAYOUT --- */
+        /* --- LAYOUT --- */
         .container { max-width: 1000px; margin: 0 auto; padding: 40px 20px; }
-
         header { text-align: center; padding-bottom: 40px; border-bottom: 1px solid var(--border); margin-bottom: 40px; }
         h1 { font-size: 2.5rem; color: var(--gold); text-transform: uppercase; letter-spacing: 4px; margin-bottom: 10px; text-shadow: 0 0 20px rgba(241, 196, 15, 0.3); }
         .subtitle { color: var(--text-muted); font-size: 1.1rem; font-weight: 300; letter-spacing: 1px; }
         .tag { display: inline-block; background: rgba(241, 196, 15, 0.1); color: var(--gold); padding: 5px 12px; border-radius: 20px; font-size: 0.7rem; border: 1px solid var(--gold); margin-top: 15px; font-weight: bold; }
 
-        /* --- WIDGET DASHBOARD STYLES (DITAMBAHKAN KEMBALI) --- */
-        .dashboard-widgets {
-            display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; margin-top: 40px;
-        }
+        /* --- WIDGET DASHBOARD --- */
+        .dashboard-widgets { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; margin-top: 40px; }
         .widget-card {
             background: #0a0a0a; border: 1px solid var(--border); border-radius: 20px;
-            padding: 20px; width: 100%; max-width: 300px;
+            padding: 20px; width: 100%; max-width: 320px;
             display: flex; flex-direction: column; align-items: center;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
         .widget-title { color: var(--gold); font-size: 0.8rem; letter-spacing: 2px; margin-bottom: 15px; text-transform: uppercase; border-bottom: 1px solid #333; padding-bottom: 5px; width: 100%; text-align: center; font-weight: bold; }
 
-        /* Jam Analog */
+        /* Jam Analog Styles */
         .clock-frame { position: relative; width: 180px; height: 180px; border: 3px solid var(--gold); border-radius: 50%; background: #000; box-shadow: 0 0 15px rgba(241, 196, 15, 0.2); }
         .zones-bg { position: absolute; width: 100%; height: 100%; border-radius: 50%; background: conic-gradient(var(--color-8-2) 0deg 90deg, var(--color-2-4) 90deg 180deg, var(--color-4-6) 180deg 270deg, var(--color-6-8) 270deg 360deg); }
         .tick { position: absolute; width: 100%; height: 100%; }
@@ -87,38 +81,32 @@
         .digi-time { font-family: monospace; font-size: 1.1rem; color: #fff; font-weight: bold; }
         .digi-fase { font-size: 0.65rem; color: var(--blue); letter-spacing: 1px; margin-top: 3px; }
 
-        /* Kalender */
+        /* Kalender Styles */
         .cal-header { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 10px; }
-        .cal-btn { background: none; border: 1px solid #444; color: var(--gold); cursor: pointer; border-radius: 5px; padding: 2px 8px; }
+        .cal-btn { background: none; border: 1px solid #444; color: var(--gold); cursor: pointer; border-radius: 5px; padding: 2px 8px; transition: 0.2s; }
+        .cal-btn:hover { background: #333; }
         .cal-month { font-weight: bold; color: #fff; font-size: 0.9rem; }
         .cal-year { font-size: 0.7rem; color: #666; text-align: center; margin-bottom: 5px; }
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; width: 100%; }
-        .cal-day-name { font-size: 0.5rem; text-align: center; color: #555; font-weight: bold; }
-        .cal-cell { aspect-ratio: 1/1; border: 1px solid #222; border-radius: 5px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.8rem; position: relative; color: #aaa; }
+        .cal-day-name { font-size: 0.5rem; text-align: center; color: #555; font-weight: bold; padding-bottom: 5px; }
+        .cal-cell { aspect-ratio: 1/1; border: 1px solid #222; border-radius: 5px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.8rem; position: relative; color: #aaa; background: #111; }
         .cal-cell.today { border: 1px solid var(--gold); background: rgba(241, 196, 15, 0.1); color: #fff; font-weight: bold; }
+        .cal-cell.empty { background: transparent; border: none; }
         .cal-pasaran { font-size: 0.4rem; color: var(--gold); margin-top: -2px; }
 
         /* --- CONTENT STYLES --- */
         section { margin-bottom: 60px; }
         h2 { border-left: 4px solid var(--gold); padding-left: 15px; margin-bottom: 25px; color: #fff; text-transform: uppercase; letter-spacing: 2px; }
         p { color: #ccc; }
-
-        /* Warning */
         .warning-box { background: rgba(231, 76, 60, 0.1); border: 2px solid var(--red); padding: 20px; border-radius: 15px; color: #ffcccc; margin-bottom: 40px; text-align: left; }
         .warning-title { color: var(--red); font-weight: bold; font-size: 1.2rem; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
-
-        /* Grid & Cards */
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
         .card { background: var(--card-bg); border: 1px solid var(--border); padding: 25px; border-radius: 15px; transition: 0.3s; }
         .card:hover { transform: translateY(-5px); border-color: var(--gold); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         .card-icon { font-size: 2rem; margin-bottom: 15px; display: block; }
         .card-title { font-weight: bold; color: #fff; margin-bottom: 10px; display: block; font-size: 1.1rem; }
-
-        /* Workflow */
         .step { display: flex; gap: 20px; margin-bottom: 20px; align-items: flex-start; }
         .step-num { background: var(--gold); color: #000; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; }
-
-        /* Pros Cons */
         .comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
         .list-box h3 { text-align: center; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
         ul { list-style: none; padding: 0; }
@@ -126,13 +114,8 @@
         li::before { content: '•'; position: absolute; left: 0; font-weight: bold; }
         .pros li::before { color: var(--green); content: '✓'; }
         .cons li::before { color: var(--red); content: '⚠'; }
-
         footer { text-align: center; border-top: 1px solid var(--border); padding-top: 40px; color: var(--text-muted); font-size: 0.9rem; }
-        @media (max-width: 600px) {
-            .comparison { grid-template-columns: 1fr; }
-            h1 { font-size: 1.8rem; }
-            .nav-menu { justify-content: flex-start; }
-        }
+        @media (max-width: 600px) { .comparison { grid-template-columns: 1fr; } h1 { font-size: 1.8rem; } .nav-menu { justify-content: flex-start; } }
     </style>
 </head>
 <body>
@@ -156,7 +139,7 @@
         <div class="dashboard-widgets">
             
             <div class="widget-card">
-                <div class="widget-title">WAKTU SUNDA NUSWANTARA</div>
+                <div class="widget-title">JAM UNIVERSAL NUSWANTARA</div>
                 <div class="clock-frame" id="clock">
                     <div class="zones-bg"></div>
                     <div class="center-dot"></div>
@@ -181,7 +164,7 @@
             </div>
 
         </div>
-        </header>
+    </header>
 
     <div class="warning-box">
         <div class="warning-title">⚠️ PERINGATAN KEAMANAN DATA</div>
@@ -215,98 +198,36 @@
     <section>
         <h2>2. Arsitektur Sistem</h2>
         <div class="grid">
-            <div class="card" style="border-top: 4px solid var(--blue);">
-                <span class="card-icon">🏛️</span>
-                <span class="card-title">BANK SENTRAL (The Trustee)</span>
-                <p style="font-size:0.9rem; color:#aaa;">Lembaga amanah yang mencetak bukti digital atas aset fisik. Mengelola cadangan emas/perak dan memusnahkan bukti digital saat aset fisik ditarik (Redeem).</p>
-            </div>
-            <div class="card" style="border-top: 4px solid var(--gold);">
-                <span class="card-icon">📱</span>
-                <span class="card-title">WALLET (Sovereign User)</span>
-                <p style="font-size:0.9rem; color:#aaa;">Dompet digital warga yang menyimpan hak kepemilikan aset. Data tersimpan di perangkat pengguna, bukan di server pusat.</p>
-            </div>
-            <div class="card" style="border-top: 4px solid var(--green);">
-                <span class="card-icon">📊</span>
-                <span class="card-title">PUBLIC LEDGER (Transparency)</span>
-                <p style="font-size:0.9rem; color:#aaa;">Papan pengumuman terbuka (CCTV Keuangan) untuk memantau sirkulasi dan mencegah penciptaan uang tanpa jaminan (fiat).</p>
-            </div>
+            <div class="card" style="border-top: 4px solid var(--blue);"><span class="card-icon">🏛️</span><span class="card-title">BANK SENTRAL</span><p style="font-size:0.9rem; color:#aaa;">Lembaga amanah yang mencetak bukti digital atas aset fisik, Mengelola cadangan emas/perak dan memusnahkan bukti digital saat aset fisik di tarik (Reedem).</p></div>
+            <div class="card" style="border-top: 4px solid var(--gold);"><span class="card-icon">📱</span><span class="card-title">WALLET</span><p style="font-size:0.9rem; color:#aaa;">Dompet digital warga yang menyimpan hak kepemilikan aset. Data tersimpan di perangkat pengguna, bukan di server pusat.</p></div>
+            <div class="card" style="border-top: 4px solid var(--green);"><span class="card-icon">📊</span><span class="card-title">PUBLIC LEDGER</span><p style="font-size:0.9rem; color:#aaa;">Papan pengumuman terbuka (CCTV Keuangan) untuk memantau sirkulasi dan mencegah penciptaan uang tanpa jaminan (fiat).</p></div>
         </div>
     </section>
 
     <section>
         <h2>3. Fitur Unggulan</h2>
         <div class="grid">
-            <div class="card">
-                <span class="card-title">⚡ QR Code Payment</span>
-                Transfer aset semudah scan QR. Tanpa perantara bank konvensional.
-            </div>
-            <div class="card">
-                <span class="card-title">🔒 Sovereign Identity</span>
-                Identitas Anda adalah Kunci Rahasia Anda. Tanpa KTP/Email.
-            </div>
-            <div class="card">
-                <span class="card-title">💎 Backed by Asset</span>
-                Setiap digit saldo mewakili gramasi Emas (Dinar) atau Perak (Dirham).
-            </div>
-            <div class="card">
-                <span class="card-title">🩺 Auto-Heal & Safe Math</span>
-                Teknologi perbaikan data otomatis untuk mencegah error perhitungan saldo.
-            </div>
-            <div class="card">
-                <span class="card-title">🛑 Anti-Manipulation</span>
-                Saldo yang sudah beredar di masyarakat tidak bisa dihapus sepihak oleh Bank (Anti-Freeze).
-            </div>
-            <div class="card">
-                <span class="card-title">🌍 Transparansi Total</span>
-                Audit publik real-time. Tidak ada pencetakan uang diam-diam.
-            </div>
+            <div class="card"><span class="card-title">⚡ QR Code Payment</span>Transfer aset semudah scan QR. Tanpa perantara bank konvensional. </div>
+            <div class="card"><span class="card-title">🔒 Sovereign Identity</span>Identitas Anda adalah Kunci Rahasia Anda. Tanpa KTP/Email. </div>
+            <div class="card"><span class="card-title">💎 Backed by Asset</span>Setiap digit saldo mewakili gramasi Emas (Dinar) atau Perak (Dirham). </div>
+            <div class="card"><span class="card-title">🩺 Auto-Heal</span>Teknologi perbaikan data otomatis untuk mencegah error perhitungan saldo. </div>
+            <div class="card"><span class="card-title">🛑 Anti-Manipulation</span>Saldo yang sudah beredar di masyarakat tidak bisa dihapus sepihak oleh Bank (Anti-Freeze).</div>
+            <div class="card"><span class="card-title">🌍 Transparansi Total</span>Audit publik real-time. Tidak ada pencetakan uang diam-diam.</div>
         </div>
     </section>
 
     <section>
-        <h2>4. Alur Penggunaan (Workflow)</h2>
-        <div class="step">
-            <div class="step-num">1</div>
-            <div>
-                <strong style="color:#fff;">Titip Aset (Minting)</strong><br>
-                Pengunjung menitipkan uang/aset fisik ke Bank Sentral. Bank menerbitkan bukti saldo digital.
-            </div>
-        </div>
-        <div class="step">
-            <div class="step-num">2</div>
-            <div>
-                <strong style="color:#fff;">Transaksi (Circulation)</strong><br>
-                Pengunjung menggunakan saldo untuk bertukar barang/jasa sesama warga atau merchant.
-            </div>
-        </div>
-        <div class="step">
-            <div class="step-num">3</div>
-            <div>
-                <strong style="color:#fff;">Penarikan (Redeem)</strong><br>
-                Pemegang saldo (Pedagang/Warga) mengembalikan saldo digital ke Bank. Bank memusnahkan saldo digital dan menyerahkan aset fisik.
-            </div>
-        </div>
+        <h2>4. Alur Penggunaan</h2>
+        <div class="step"><div class="step-num">1</div><div><strong style="color:#fff;">Titip Aset (Minting)</strong><br>Pengunjung menitipkan uang/aset fisik ke Bank Sentral. Bank menerbitkan bukti saldo digital.</div></div>
+        <div class="step"><div class="step-num">2</div><div><strong style="color:#fff;">Transaksi (Circulation)</strong><br>Pengunjung menggunakan saldo untuk bertukar barang/jasa sesama warga atau merchant. </div></div>
+        <div class="step"><div class="step-num">3</div><div><strong style="color:#fff;">Penarikan (Redeem)</strong><br>Pemegang saldo (Pedagang/Warga) mengembalikan saldo digital ke Bank. Bank memusnahkan saldo digital dan menyerahkan aset fisik.</div></div>
     </section>
 
     <section>
         <h2>5. Analisis Sistem</h2>
         <div class="comparison">
-            <div class="list-box pros">
-                <h3 style="color:var(--green);">✅ KELEBIHAN</h3>
-                <ul>
-                    <li><strong>Adil & Jujur:</strong> Tidak ada riba atau penciptaan uang dari udara.</li>
-                    <li><strong>Efisien:</strong> Transaksi cepat tanpa uang kembalian receh.</li>
-                    <li><strong>Higienis:</strong> Contactless (Nirsentuh).</li>
-                    <li><strong>Kedaulatan:</strong> Pengguna memegang kendali penuh atas asetnya.</li>
-                </ul>
-            </div>
-            <div class="list-box cons">
-                <h3 style="color:var(--red);">⚠️ PERHATIAN KHUSUS</h3>
-                <ul>
-                    <li><strong>Tanggung Jawab Pribadi:</strong> Kehilangan perangkat atau "Clear Cache" tanpa backup = Kehilangan Aset.</li>
-                    <li><strong>Koneksi Internet:</strong> Diperlukan untuk validasi keaslian token (mencegah pemalsuan).</li>
-                </ul>
-            </div>
+            <div class="list-box pros"><h3 style="color:var(--green);">✅ KELEBIHAN</h3><ul><li><strong>Adil & Jujur:</strong> Tidak ada riba atau penciptaan uang dari udara.<li><strong>Efisien:</strong> Transaksi cepat tanpa uang kembalian receh.</li><li><strong>Higienis:</strong> Contactless (Nirsentuh).</li><li><strong>Kedaulatan:</strong> Pengguna memegang kendali penuh atas asetnya.</li></ul></div>
+            <div class="list-box cons"><h3 style="color:var(--red);">⚠️ PERHATIAN</h3><ul><li><strong>Tanggung Jawab:</strong> Kehilangan perangkat atau "Clear Cache" tanpa backup = Kehilangan Aset.</li><li><strong>Koneksi:</strong>Diperlukan untuk validasi keaslian token (mencegah pemalsuan).</li></ul></div>
         </div>
     </section>
 
@@ -317,9 +238,13 @@
 </div>
 
 <script>
-    // --- LOGIC JAM ---
+    /* ==============================================
+       CORE LOGIC: NUSWANTARA STANDARD LIBRARY
+       Epoch: 21 Maret 2025 (Jumat Pahing)
+       ============================================== */
+    
+    // --- JAM LOGIC ---
     const clock = document.getElementById('clock');
-    // Generate Ticks & Numbers
     for(let i=0; i<48; i++) {
         let t = document.createElement('div');
         t.className = (i % 6 === 0) ? 'tick tick-main' : 'tick';
@@ -359,53 +284,94 @@
     }
     setInterval(updateClock, 1000); updateClock();
 
-    // --- LOGIC KALENDER ---
+    // --- KALENDER LOGIC (FIXED SHIFTING) ---
     const months = ["01.Wiwitan", "02.Gangga", "03.Bija", "04.Trubus", "05.Teja", "06.Baskara", "07.Kartika", "08.Huma", "09.Phala", "10.Lumbung", "11.Reswara", "12.Purnaka", "13.Suwung"];
     const pasarans = ["Legi", "Pahing", "Pon", "Wage", "Kliwon"];
-    const daysNusa = ["Rad", "Som", "Ang", "Bud", "Res", "Suk", "Tum"];
-    let currYear = 2025; let currMonthIdx = 0;
-
-    function initCal() {
-        let now = new Date();
-        let anchor = new Date(now.getFullYear(), 2, 21);
-        if (now < anchor) anchor = new Date(now.getFullYear()-1, 2, 21);
-        let diff = Math.floor((now - anchor) / 86400000);
-        currMonthIdx = Math.min(Math.floor(diff / 28), 12);
-        currYear = now.getFullYear();
-        renderCal();
-    }
+    const daysNusa = ["Rad", "Som", "Ang", "Bud", "Res", "Suk", "Tum"]; // Minggu - Sabtu
+    
+    // STATE NAVIGASI
+    let navYear = new Date().getFullYear();
+    // Hitung bulan saat ini berdasarkan 21 Maret
+    let now = new Date();
+    let anchorNow = new Date(navYear, 2, 21);
+    if(now < anchorNow) anchorNow = new Date(navYear-1, 2, 21);
+    let diffNow = Math.floor((now - anchorNow)/86400000);
+    let navMonthIdx = Math.min(Math.floor(diffNow/28), 12);
+    if(now < new Date(navYear, 2, 21)) navYear--; // Adjust jika sebelum maret
 
     function renderCal() {
-        document.getElementById('monthDisplay').innerText = months[currMonthIdx].toUpperCase();
-        let nYear = currYear - 2024;
-        document.getElementById('yearLabel').innerText = `Tahun ${String(nYear).padStart(3,'0')} (Masehi ${currYear})`;
+        // 1. Tentukan Awal Tahun Masehi untuk Navigasi Ini
+        // Di sistem Nuswantara, Tahun X dimulai 21 Maret X.
+        // Jadi Bulan 0 (Wiwitan) Tahun 2025 dimulai 21 Maret 2025.
         
-        const grid = document.getElementById('calGrid'); grid.innerHTML = "";
+        // Cari tanggal Masehi untuk Tanggal 1 di Bulan & Tahun yang dipilih
+        let startOfEochYear = new Date(navYear, 2, 21); // 21 Maret [navYear]
+        let daysToAdd = navMonthIdx * 28;
+        let startOfMonthDate = new Date(startOfEochYear);
+        startOfMonthDate.setDate(startOfEochYear.getDate() + daysToAdd);
+        
+        // 2. Cari Hari Apa tanggal 1 tersebut? (0=Minggu/Radite, 6=Sabtu/Tumpek)
+        let startDayIdx = startOfMonthDate.getDay(); 
+
+        // 3. Render UI
+        document.getElementById('monthDisplay').innerText = months[navMonthIdx].toUpperCase();
+        let nYear = navYear - 2024;
+        document.getElementById('yearLabel').innerText = `Tahun ${String(nYear).padStart(3,'0')} (Masehi ${navYear})`;
+        
+        const grid = document.getElementById('calGrid'); 
+        grid.innerHTML = "";
+        
+        // Header Hari
         daysNusa.forEach(d => grid.innerHTML += `<div class="cal-day-name">${d}</div>`);
 
-        let now = new Date();
-        let anchor = new Date(now.getFullYear(), 2, 21);
-        if (now < anchor) anchor = new Date(now.getFullYear()-1, 2, 21);
-        let realDiff = Math.floor((now - anchor) / 86400000);
-        let realM = Math.floor(realDiff / 28);
-        let realD = (realDiff % 28) + 1;
+        // Kotak Kosong (Padding) Sebelum Tanggal 1
+        for(let i=0; i<startDayIdx; i++) {
+            grid.innerHTML += `<div class="cal-cell empty"></div>`;
+        }
+
+        // Render Tanggal 1-28
+        // Hitung total hari dari Epoch (21 Maret 2025) untuk cari Pasaran
+        let epochDate = new Date(2025, 2, 21);
+        let diffFromEpoch = Math.floor((startOfMonthDate - epochDate) / 86400000);
 
         for(let d=1; d<=28; d++) {
-            let totalDays = ((currYear - 2025)*365) + (currMonthIdx*28) + (d-1);
-            let pIdx = (2 + (totalDays % 5)) % 5; if(pIdx<0) pIdx+=5;
-            let isToday = (currYear === now.getFullYear() && currMonthIdx === realM && d === realD);
+            // Pasaran logic: (EpochPasaran + TotalDays) % 5
+            // Epoch (21 Mar 2025) = Pahing (Index 1)
+            let currentDayDiff = diffFromEpoch + (d - 1);
+            let pIdx = (1 + currentDayDiff) % 5; 
+            if(pIdx < 0) pIdx += 5; // Handle tahun sebelum 2025
+
+            // Cek Today
+            let isToday = false;
+            let realNow = new Date();
+            // Bandingkan tanggal masehi-nya
+            let checkDate = new Date(startOfMonthDate);
+            checkDate.setDate(checkDate.getDate() + (d-1));
+            
+            if(checkDate.getDate() === realNow.getDate() && 
+               checkDate.getMonth() === realNow.getMonth() && 
+               checkDate.getFullYear() === realNow.getFullYear()) {
+                isToday = true;
+            }
+
             grid.innerHTML += `<div class="cal-cell ${isToday?'today':''}">${d}<div class="cal-pasaran">${pasarans[pIdx]}</div></div>`;
         }
     }
 
     function changeMonth(step) {
-        let n = currMonthIdx + step;
-        if(n > 12) { n=0; currYear++; }
-        else if(n < 0) { n=12; currYear--; }
-        currMonthIdx = n; renderCal();
+        navMonthIdx += step;
+        if(navMonthIdx > 12) { 
+            navMonthIdx = 0; 
+            navYear++; 
+        } else if(navMonthIdx < 0) { 
+            navMonthIdx = 12; 
+            navYear--; 
+        }
+        renderCal();
     }
     
-    initCal();
+    // Init
+    renderCal();
 </script>
 
 </body>
