@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AUDIT & FISIK NUSWANTARA</title>
+    <style>
+        body { background: #050505; color: #ccc; font-family: 'Segoe UI', monospace; padding: 20px; min-height: 100vh; margin: 0; display: flex; flex-direction: column; align-items: center; }
+        
+        .container { width: 100%; max-width: 1000px; }
+        h2 { text-align: center; border-bottom: 1px solid #333; padding-bottom: 15px; letter-spacing: 4px; color: #fff; margin-bottom: 30px; text-transform: uppercase; }
+
+        /* GRID UTAMA */
+        .grid-split { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px; }
+        
+        /* CARD STYLE */
+        .card { background: #111; border: 1px solid #333; border-radius: 15px; overflow: hidden; position: relative; }
+        .card-header { padding: 15px; background: #1a1a1a; border-bottom: 1px solid #333; text-align: center; font-weight: bold; letter-spacing: 1px; color: #fff; }
+        .card-body { padding: 20px; }
+
+        /* ROW DATA */
+        .data-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px dashed #333; padding-bottom: 10px; }
+        .data-label { font-size: 0.8rem; color: #888; text-transform: uppercase; }
+        .data-val { font-size: 1.2rem; font-weight: bold; color: #fff; }
+        
+        .gold-txt { color: #f1c40f; }
+        .silver-txt { color: #bdc3c7; }
+        .blue-txt { color: #3498db; }
+
+        /* PROGRESS BAR */
+        .progress-container { background: #222; height: 8px; border-radius: 4px; overflow: hidden; display: flex; margin-top: 20px; }
+        .bar-fill { height: 100%; transition: 1s; }
+
+        /* STATUS BOX */
+        .status-box { text-align: center; padding: 15px; border-radius: 10px; margin-top: 10px; font-weight: bold; border: 1px solid; }
+        
+        .safe { background: rgba(46, 204, 113, 0.1); border-color: #2ecc71; color: #2ecc71; }
+        .warn { background: rgba(241, 196, 15, 0.1); border-color: #f1c40f; color: #f1c40f; }
+        .danger { background: rgba(231, 76, 60, 0.1); border-color: #e74c3c; color: #e74c3c; animation: blink 2s infinite; }
+        .info { background: rgba(52, 152, 219, 0.1); border-color: #3498db; color: #3498db; }
+
+        @keyframes blink { 0% {opacity:1;} 50% {opacity:0.6;} 100% {opacity:1;} }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>KOMANDO PUSAT MONETER</h2>
+
+    <div class="grid-split">
+        
+        <div class="card" style="border-top: 4px solid #3498db;">
+            <div class="card-header">🏦 SUPPLY RESMI (BANK)</div>
+            <div class="card-body">
+                <div class="data-row">
+                    <span class="data-label">Nilai Total</span>
+                    <span id="bankDn" class="data-val blue-txt">0.00 Dn</span>
+                </div>
+                
+                <div class="data-row">
+                    <div>
+                        <div class="data-label">Setara Emas (Au)</div>
+                        <div style="font-size:0.7rem; color:#666;">@ 4.25 gram / Dn</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div id="bankGoldQty" class="data-val gold-txt">0.00 Dn</div>
+                        <div id="bankGoldWeight" style="font-size:0.9rem; color:#aaa;">0.00 gram</div>
+                    </div>
+                </div>
+
+                <div class="data-row" style="border-bottom:none;">
+                    <div>
+                        <div class="data-label">Setara Perak (Ag)</div>
+                        <div style="font-size:0.7rem; color:#666;">@ 2.98 gram / Dr</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div id="bankSilverQty" class="data-val silver-txt">0.00 Dr</div>
+                        <div id="bankSilverWeight" style="font-size:0.9rem; color:#aaa;">0.00 gram</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="border-top: 4px solid #f1c40f;">
+            <div class="card-header">📱 SIRKULASI (SENSUS)</div>
+            <div class="card-body">
+                <div class="data-row">
+                    <span class="data-label">Terlapor Online</span>
+                    <span id="userDn" class="data-val gold-txt">0.00 Dn</span>
+                </div>
+
+                <div class="data-row">
+                    <div class="data-label">Setara Emas</div>
+                    <div style="text-align:right;">
+                        <div id="userGoldQty" class="data-val gold-txt">0.00 Dn</div>
+                        <div id="userGoldWeight" style="font-size:0.9rem; color:#aaa;">0.00 gram</div>
+                    </div>
+                </div>
+
+                <div class="data-row" style="border-bottom:none;">
+                    <div class="data-label">Setara Perak</div>
+                    <div style="text-align:right;">
+                        <div id="userSilverQty" class="data-val silver-txt">0.00 Dr</div>
+                        <div id="userSilverWeight" style="font-size:0.9rem; color:#aaa;">0.00 gram</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body" style="text-align: center;">
+            <div style="display:flex; justify-content:space-between; color:#888; font-size:0.8rem; margin-bottom:5px;">
+                <span>DISTRIBUSI UANG</span>
+                <span><span id="txtClaimed">0%</span> Online</span>
+            </div>
+            
+            <div class="progress-container">
+                <div id="barClaimed" class="bar-fill" style="width:0%; background:#f1c40f;"></div>
+                <div id="barStagnant" class="bar-fill" style="width:100%; background:#333;"></div>
+            </div>
+            
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-top:20px;">
+                <div>
+                    <div class="data-label">Selisih Audit</div>
+                    <div id="gapVal" class="data-val">0.00 mg</div>
+                </div>
+                <div>
+                    <div class="data-label">Wallet Aktif</div>
+                    <div id="activeCount" class="data-val">0</div>
+                </div>
+                <div>
+                    <div class="data-label">Perputaran (24h)</div>
+                    <div id="velocityVal" class="data-val">0</div>
+                </div>
+            </div>
+
+            <div id="diagBox" class="status-box info">
+                MENUNGGU DATA...
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const DB_URL = "https://pasarnuswantara-default-rtdb.asia-southeast1.firebasedatabase.app/";
+
+    // --- KONSTANTA KONVERSI ---
+    const MG_PER_DIRHAM = 2980; // 2.98 gram Perak
+    const MG_PER_DINAR = 80460; // 27 Dirham (Setara 4.25 gram Emas)
+    const GRAM_GOLD_PER_DINAR = 4.25;
+    const GRAM_SILVER_PER_DIRHAM = 2.98;
+
+    async function refreshMonitor() {
+        try {
+            // 1. FETCH DATA
+            let [resBank, resCensus] = await Promise.all([
+                fetch(`${DB_URL}market_stats.json`),
+                fetch(`${DB_URL}census_report.json`)
+            ]);
+            let bankData = await resBank.json();
+            let censusData = await resCensus.json();
+
+            // 2. HITUNG BANK (RESMI)
+            let bankMg = bankData ? (bankData.total_supply_mg || 0) : 0;
+            updatePanel('bank', bankMg);
+
+            // 3. HITUNG SENSUS (RAKYAT)
+            let reportedMg = 0;
+            let wallets = 0;
+            let active24h = 0;
+            let now = Date.now();
+
+            if (censusData) {
+                for (let user of Object.values(censusData)) {
+                    let uMg = parseInt(user.balance_mg) || 0;
+                    reportedMg += uMg;
+                    wallets++;
+                    if(user.last_active && (now - user.last_active) < 86400000) active24h++;
+                }
+            }
+            updatePanel('user', reportedMg);
+
+            // 4. STATISTIK TAMBAHAN
+            document.getElementById('activeCount').innerText = wallets;
+            document.getElementById('velocityVal').innerText = active24h;
+
+            let ratio = bankMg > 0 ? (reportedMg / bankMg) * 100 : 0;
+            if(ratio > 100) ratio = 100;
+            
+            document.getElementById('txtClaimed').innerText = ratio.toFixed(1) + "%";
+            document.getElementById('barClaimed').style.width = ratio + "%";
+            document.getElementById('barStagnant').style.width = (100 - ratio) + "%";
+
+            // 5. DIAGNOSA
+            let gap = reportedMg - bankMg;
+            document.getElementById('gapVal').innerText = (gap / 1000).toFixed(3) + " g";
+            
+            let dBox = document.getElementById('diagBox');
+            if (gap > 5000) {
+                dBox.className = "status-box danger";
+                dBox.innerHTML = "⚠️ BAHAYA: UANG ILEGAL (INFLASI) TERDETEKSI!";
+            } else if (active24h === 0 && ratio > 50) {
+                dBox.className = "status-box warn";
+                dBox.innerHTML = "💤 EKONOMI MACET (Uang Ada, Transaksi Nol)";
+            } else if ((100-ratio) > 50) {
+                dBox.className = "status-box info";
+                dBox.innerHTML = "ℹ️ STATUS: SEBAGIAN BESAR UANG OFFLINE (COLD STORAGE)";
+            } else {
+                dBox.className = "status-box safe";
+                dBox.innerHTML = "✅ SISTEM SEHAT & TERSINKRONISASI";
+            }
+
+        } catch (e) { console.log(e); }
+    }
+
+    // FUNGSI UPDATE TAMPILAN PER PANEL
+    function updatePanel(prefix, mg) {
+        // Total Nilai Dinar
+        let dnVal = mg / MG_PER_DINAR;
+        document.getElementById(prefix + 'Dn').innerText = dnVal.toFixed(2) + " Dn";
+
+        // Konversi ke Emas (Seandainya semua jadi emas)
+        document.getElementById(prefix + 'GoldQty').innerText = dnVal.toFixed(2) + " Dn";
+        let goldGram = dnVal * GRAM_GOLD_PER_DINAR;
+        document.getElementById(prefix + 'GoldWeight').innerText = goldGram.toFixed(2) + " gram Au";
+
+        // Konversi ke Perak (Seandainya semua jadi perak)
+        let drVal = mg / MG_PER_DIRHAM;
+        document.getElementById(prefix + 'SilverQty').innerText = drVal.toFixed(2) + " Dr";
+        let silverGram = mg / 1000; // Karena 1000mg = 1gram
+        document.getElementById(prefix + 'SilverWeight').innerText = silverGram.toFixed(2) + " gram Ag";
+    }
+
+    setInterval(refreshMonitor, 4000);
+    refreshMonitor();
+</script>
+
+</body>
+</html>
