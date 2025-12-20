@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LIVE PUBLIC LEDGER - NUSWANTARA OS</title>
+    <title>LIVE PUBLIC LEDGER - NUSWANTARA STANDARD</title>
     <style>
         body { 
             background-color: #050505; 
@@ -37,45 +37,51 @@
             align-items: center;
         }
 
-        h1 { margin: 0; font-size: 1.2rem; color: #d4af37; letter-spacing: 3px; text-transform: uppercase; font-weight: 800; }
+        .brand h1 { margin: 0; font-size: 1.2rem; color: #d4af37; letter-spacing: 3px; text-transform: uppercase; font-weight: 800; }
         .sub-head { font-size: 0.75rem; color: #666; letter-spacing: 1px; }
 
-        /* JAM NUSWANTARA CUSTOM */
+        /* JAM NUSWANTARA DISPLAY */
         .clock-box { text-align: right; }
-        .clock-time {
-            font-size: 1.8rem;
+        
+        .clock-main {
+            font-size: 2rem;
             color: #d4af37; 
             font-weight: bold;
             font-family: monospace;
             text-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
             letter-spacing: 2px;
+            line-height: 1;
         }
+        
         .period-badge {
-            font-size: 0.8rem;
+            font-size: 0.7rem;
             background: #222;
             color: #fff;
             padding: 2px 6px;
             border-radius: 4px;
             border: 1px solid #444;
-            vertical-align: middle;
+            vertical-align: text-top;
             margin-left: 5px;
         }
+
         .clock-date {
-            font-size: 0.7rem;
+            font-size: 0.8rem;
             color: #fff;
             text-transform: uppercase;
             letter-spacing: 1px;
             font-weight: bold;
             margin-top: 5px;
         }
+        
         .clock-fase {
-            font-size: 0.6rem;
+            font-size: 0.65rem;
             color: #3498db;
             letter-spacing: 1px;
             font-style: italic;
+            margin-top: 2px;
         }
 
-        /* DASHBOARD SUMMARY */
+        /* STATS */
         .stats-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -95,12 +101,12 @@
         .gold-txt { color: #d4af37; text-shadow: 0 0 20px rgba(241, 196, 15, 0.2); }
         .silver-txt { color: #bdc3c7; text-shadow: 0 0 20px rgba(189, 195, 199, 0.2); }
 
-        /* LIST AREA */
+        /* LIST */
         #ledgerList { height: 60vh; overflow-y: auto; }
 
         .tx-row {
             display: grid;
-            grid-template-columns: 1.5fr 1.5fr 1.5fr 1fr; 
+            grid-template-columns: 1.6fr 1.4fr 1.5fr 1fr; 
             padding: 15px 30px;
             border-bottom: 1px solid #1a1a1a;
             align-items: center;
@@ -111,8 +117,8 @@
         
         .col-head { background: #0e0e0e; color: #555; font-size: 0.7rem; font-weight: bold; border-bottom: 1px solid #222; }
 
-        /* BADGES & VALUES */
-        .badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.65rem; text-transform: uppercase; width: fit-content; display: inline-block; }
+        /* BADGES */
+        .badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.65rem; text-transform: uppercase; display: inline-block; }
         .type-mint { background: rgba(46, 204, 113, 0.15); color: #2ecc71; border: 1px solid #2ecc71; }
         .type-burn { background: rgba(231, 76, 60, 0.15); color: #e74c3c; border: 1px solid #e74c3c; }
         .type-transfer { background: rgba(52, 152, 219, 0.15); color: #3498db; border: 1px solid #3498db; }
@@ -121,10 +127,11 @@
         .val-min { color: #e74c3c; font-weight: bold; }
         .val-neutral { color: #3498db; font-weight: bold; }
         
-        .tx-id { color: #444; font-size: 0.7rem; cursor: pointer; text-decoration: none; text-align: right; font-family: monospace; }
+        .tx-id { color: #444; font-size: 0.7rem; cursor: pointer; font-family: monospace; text-align: right; }
         .tx-id:hover { color: #888; text-decoration: underline; }
+        
         .time-box { display: flex; flex-direction: column; }
-        .time-main { color: #d4af37; font-weight: bold; font-size: 0.85rem; }
+        .time-main { color: #d4af37; font-weight: bold; font-size: 0.8rem; }
         .time-sub { color: #666; font-size: 0.7rem; font-style: italic; }
         .sender-info { display: block; font-size: 0.65rem; color: #666; margin-top: 4px; font-style: italic; }
 
@@ -137,17 +144,17 @@
 
 <div class="container">
     <div class="header">
-        <div>
+        <div class="brand">
             <h1>PUBLIC LEDGER</h1>
             <div class="sub-head">MONITOR KEUANGAN NUSWANTARA</div>
         </div>
         <div class="clock-box">
-            <div class="clock-time">
-                <span id="nusantaraTime">00:00</span>
-                <span id="nusantaraPeriod" class="period-badge">...</span>
+            <div class="clock-main">
+                <span id="nTime">00:00</span>
+                <span id="nPeriod" class="period-badge">...</span>
             </div>
-            <div class="clock-date" id="nusantaraDate">...</div>
-            <div class="clock-fase" id="nusantaraFase">...</div>
+            <div class="clock-date" id="nDateFull">...</div>
+            <div class="clock-fase" id="nFase">...</div>
         </div>
     </div>
 
@@ -175,24 +182,32 @@
 </div>
 
 <script>
+    /* =======================================================
+       NUSWANTARA STANDARD LIBRARY (CORE)
+       Epoch: 21 Maret 2025 (Jumat Pahing) = 01 Wiwitan 001
+       ======================================================= */
+    
     const DB_URL = "https://pasarnuswantara-default-rtdb.asia-southeast1.firebasedatabase.app/";
     const MG_PER_DINAR = 80460;
     const MG_PER_DIRHAM = 2980;
 
-    // --- KAMUS NUSWANTARA OS ---
-    const MONTHS_NUSA = ["Wiwitan", "Gangga", "Bija", "Trubus", "Teja", "Baskara", "Kartika", "Huma", "Phala", "Lumbung", "Reswara", "Purnaka", "Suwung"];
-    const PASARAN = ["Legi", "Pahing", "Pon", "Wage", "Kliwon"];
-    const DAYS_NUSA = ["Radite", "Soma", "Anggara", "Buda", "Respati", "Sukra", "Tumpek"]; // Minggu - Sabtu
-    
-    const PHASE_DB = [
-        { id: 7, name: "ISTIWA" }, { id: 8, name: "ASAR" },
-        { id: 1, name: "SANDIKALA" }, { id: 2, name: "SIREPAN" },
-        { id: 3, name: "HENING" }, { id: 4, name: "FAJAR" },
-        { id: 5, name: "DUHA" }, { id: 6, name: "KARYA" }
-    ];
+    const NUSA = {
+        EPOCH: new Date(2025, 2, 21), // 21 Maret 2025
+        EPOCH_DAY_IDX: 5, // Jumat (0=Radite/Minggu)
+        EPOCH_PASARAN_IDX: 1, // Pahing (0=Legi)
+        MONTHS: ["Wiwitan", "Gangga", "Bija", "Trubus", "Teja", "Baskara", "Kartika", "Huma", "Phala", "Lumbung", "Reswara", "Purnaka", "Suwung"],
+        DAYS: ["Radite", "Soma", "Anggara", "Buda", "Respati", "Sukra", "Tumpek"],
+        PASARANS: ["Legi", "Pahing", "Pon", "Wage", "Kliwon"],
+        PHASES: [
+            { id: 7, name: "ISTIWA (8-2 Siang)" }, { id: 8, name: "ASAR (2-4 Siang)" },
+            { id: 1, name: "SANDIKALA (4-6 Malam)" }, { id: 2, name: "SIREPAN (6-8 Malam)" },
+            { id: 3, name: "HENING (8-2 Malam)" }, { id: 4, name: "FAJAR (2-4 Malam)" },
+            { id: 5, name: "DUHA (4-6 Siang)" }, { id: 6, name: "KARYA (6-8 Siang)" }
+        ]
+    };
 
-    // --- LOGIKA KONVERSI WAKTU ---
-    function convertToNusantaraTime(dateObj) {
+    // 1. FUNGSI WAKTU (JAM 1-8)
+    function getNusaTime(dateObj) {
         const h = dateObj.getHours();
         const m = dateObj.getMinutes();
         const s = dateObj.getSeconds();
@@ -204,95 +219,106 @@
         let dMin = Math.floor((nTotalHours % 1) * 90);
         
         let period = (h >= 6 && h < 18) ? "SIANG" : "MALAM";
-
-        const phaseSequence = [3, 4, 5, 6, 7, 8, 1, 2];
         let seqIdx = Math.floor(h / 3);
-        let currentPhase = PHASE_DB.find(p => p.id === phaseSequence[seqIdx]);
+        let currentPhase = NUSA.PHASES.find(p => p.id === [3, 4, 5, 6, 7, 8, 1, 2][seqIdx]);
 
         return {
-            timeStr: `${String(dHour).padStart(2, '0')}:${String(dMin).padStart(2, '0')}`,
+            str: `${String(dHour).padStart(2, '0')}:${String(dMin).padStart(2, '0')}`,
             period: period,
-            fase: currentPhase.name
+            fase: currentPhase ? currentPhase.name : ""
         };
     }
 
-    // --- LOGIKA KONVERSI KALENDER ---
-    function convertToNusantaraDate(dateObj) {
+    // 2. FUNGSI KALENDER (EPOCH BASED)
+    function getNusaDate(dateObj) {
+        // A. Hitung Selisih Hari Total dari Epoch
+        // Kita pakai UTC di internal agar tidak kena Daylight Saving/Zona Waktu aneh
+        let uNow = Date.UTC(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
+        let uEpoch = Date.UTC(2025, 2, 21);
+        let diffDays = Math.floor((uNow - uEpoch) / (1000 * 60 * 60 * 24));
+
+        // B. Hitung Hari & Pasaran (Pasti Akurat)
+        // Pakai rumus (Awal + Diff) % Siklus. Tambah kelipatan besar agar support tanggal mundur.
+        let dayIdx = (NUSA.EPOCH_DAY_IDX + diffDays) % 7;
+        if (dayIdx < 0) dayIdx += 7;
+        
+        let pasaranIdx = (NUSA.EPOCH_PASARAN_IDX + diffDays) % 5;
+        if (pasaranIdx < 0) pasaranIdx += 5;
+
+        // C. Hitung Tahun & Bulan (Solar Anchor 21 Maret)
         let yr = dateObj.getFullYear();
         let anchor = new Date(yr, 2, 21);
-        if (dateObj < anchor) { anchor = new Date(yr - 1, 2, 21); yr--; }
-
-        let diff = Math.floor((dateObj - anchor) / 86400000);
-        let nMonthIdx = Math.floor(diff / 28);
-        let nDay = (diff % 28) + 1;
-        let nYear = yr - 2024; 
+        if (dateObj < anchor) {
+            anchor = new Date(yr - 1, 2, 21);
+            yr--; 
+        }
         
-        let totalDays = Math.floor((dateObj - new Date(2025, 2, 21)) / 86400000);
-        let pIdx = (2 + (totalDays % 5)) % 5; 
-        if (pIdx < 0) pIdx += 5;
+        // Hitung hari sejak 21 Maret tahun tersebut
+        let uAnchor = Date.UTC(anchor.getFullYear(), anchor.getMonth(), anchor.getDate());
+        let daysSinceAnchor = Math.floor((uNow - uAnchor) / (1000 * 60 * 60 * 24));
+        
+        let nMonthIdx = 0;
+        let nDate = 0;
 
-        // Ambil Nama Hari (0=Minggu -> Radite)
-        let dayIdx = dateObj.getDay();
+        if (daysSinceAnchor < 336) { // 12 Sasih x 28
+            nMonthIdx = Math.floor(daysSinceAnchor / 28);
+            nDate = (daysSinceAnchor % 28) + 1;
+        } else { // Sasih ke-13 (Suwung)
+            nMonthIdx = 12;
+            nDate = (daysSinceAnchor - 336) + 1;
+        }
+
+        let nYear = yr - 2024; // 2025 = Tahun 1
 
         return {
-            day: nDay,
-            month: MONTHS_NUSA[nMonthIdx] || "Suwung",
+            dayName: NUSA.DAYS[dayIdx],
+            pasaran: NUSA.PASARANS[pasaranIdx],
+            date: nDate,
+            month: NUSA.MONTHS[nMonthIdx],
             year: String(nYear).padStart(3, '0'),
-            pasaran: PASARAN[pIdx],
-            dayName: DAYS_NUSA[dayIdx] // Nama Hari Baru
+            full: `${NUSA.DAYS[dayIdx]}, ${nDate} ${NUSA.MONTHS[nMonthIdx]} ${String(nYear).padStart(3, '0')} | ${NUSA.PASARANS[pasaranIdx]}`
         };
     }
 
-    // --- UPDATE JAM BERJALAN ---
+    // --- MAIN APP ---
+
     function updateClock() {
         const now = new Date();
-        const nTime = convertToNusantaraTime(now);
-        const nDate = convertToNusantaraDate(now);
+        const t = getNusaTime(now);
+        const d = getNusaDate(now);
         
-        document.getElementById('nusantaraTime').innerText = nTime.timeStr;
-        document.getElementById('nusantaraPeriod').innerText = nTime.period;
-        
-        // UPDATE FORMAT TANGGAL DI POJOK ATAS
-        document.getElementById('nusantaraDate').innerText = `${nDate.dayName}, ${nDate.day} ${nDate.month} ${nDate.year} | ${nDate.pasaran}`;
-        document.getElementById('nusantaraFase').innerText = `FASE: ${nTime.fase}`;
+        document.getElementById('nTime').innerText = t.str;
+        document.getElementById('nPeriod').innerText = t.period;
+        document.getElementById('nDateFull').innerText = d.full;
+        document.getElementById('nFase').innerText = t.fase;
     }
-    setInterval(updateClock, 1000);
-    updateClock();
+    setInterval(updateClock, 1000); updateClock();
 
-    // --- FETCH DATA ---
     async function fetchAllData() {
         let bust = "?r=" + Date.now();
         try {
+            // Stats
             let resStats = await fetch(`${DB_URL}market_stats.json${bust}`);
             let stats = await resStats.json();
             let totalMg = (stats && stats.total_supply_mg) ? parseInt(stats.total_supply_mg) : 0;
-            
-            let dinar = (totalMg / MG_PER_DINAR).toFixed(2);
-            let dirham = (totalMg / MG_PER_DIRHAM).toFixed(2);
-            
-            document.getElementById('sumDinar').innerHTML = `${dinar} <span style="font-size:1rem;">Dn</span>`;
-            document.getElementById('sumDirham').innerHTML = `${dirham} <span style="font-size:1rem;">Dr</span>`;
+            document.getElementById('sumDinar').innerHTML = `${(totalMg/MG_PER_DINAR).toFixed(2)} <span style="font-size:1rem;">Dn</span>`;
+            document.getElementById('sumDirham').innerHTML = `${(totalMg/MG_PER_DIRHAM).toFixed(2)} <span style="font-size:1rem;">Dr</span>`;
 
+            // Ledger
             let resLedger = await fetch(`${DB_URL}public_ledger.json?orderBy="$key"&limitToLast=50`);
             let data = await resLedger.json();
-            
-            if(!data) {
-                document.getElementById('ledgerList').innerHTML = '<div style="padding:50px; text-align:center; color:#333;">Belum ada catatan transaksi publik.</div>';
-                return;
-            }
+            if(!data) { document.getElementById('ledgerList').innerHTML = '<div style="padding:50px; text-align:center;">Data kosong.</div>'; return; }
 
             let logs = Object.values(data).sort((a,b) => b.timestamp - a.timestamp);
-            
             let html = logs.map(log => {
                 let dateObj = new Date(log.timestamp);
+                let t = getNusaTime(dateObj);
+                let d = getNusaDate(dateObj);
                 
-                let nTime = convertToNusantaraTime(dateObj);
-                let nDate = convertToNusantaraDate(dateObj);
-                
-                // Di list transaksi, kita pakai format ringkas
-                let displayDate = `${nDate.dayName}, ${nDate.day} ${nDate.month} ${nDate.year}`;
-                let displayTime = `${nTime.timeStr} ${nTime.period}`;
-                
+                // Format Ringkas di List
+                let dispDate = `${d.dayName}, ${d.date} ${d.month} ${d.year} (${d.pasaran})`;
+                let dispTime = `${t.str} ${t.period}`;
+
                 let isMint = log.type === 'MINT';
                 let isBurn = log.type === 'BURN';
                 let typeBadge, valClass, valStr, senderHtml = "";
@@ -311,28 +337,18 @@
 
                 return `
                     <div class="tx-row">
-                        <div class="time-box">
-                            <span class="time-main">${displayDate}</span>
-                            <span class="time-sub">${displayTime}</span>
-                        </div>
+                        <div class="time-box"><span class="time-main">${dispDate}</span><span class="time-sub">${dispTime}</span></div>
                         <div>${typeBadge}${senderHtml}</div>
                         <div class="${valClass}">${valStr}</div>
-                        <div class="tx-id" onclick="copy('${log.tx_id}')" title="Salin ID">#${log.tx_id.substring(0, 8)}...</div>
-                    </div>
-                `;
+                        <div class="tx-id" onclick="copy('${log.tx_id}')" title="Copy">#${log.tx_id.substring(0, 8)}...</div>
+                    </div>`;
             }).join('');
-            
             document.getElementById('ledgerList').innerHTML = html;
-
-        } catch(e) { console.error("Error fetching data:", e); }
+        } catch(e) {}
     }
-
-    function copy(text) { navigator.clipboard.writeText(text); alert("ID Disalin: " + text); }
-
-    setInterval(fetchAllData, 3000);
-    fetchAllData(); 
+    function copy(t) { navigator.clipboard.writeText(t); alert("ID Disalin!"); }
+    setInterval(fetchAllData, 3000); fetchAllData();
 </script>
 
 </body>
 </html>
-
