@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nuswantara Wallet v20.5</title>
+    <title>Nuswantara Wallet v20.6</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
@@ -18,10 +18,6 @@
         
         .id-badge { background: #000; color: #aaa; padding: 5px 8px; border-radius: 5px; font-size: 0.65rem; margin-top: 5px; border: 1px solid #333; display: inline-block; font-family: monospace; letter-spacing: 1px; }
         .btn-report { background: #e67e22; color: white; border: none; padding: 5px 10px; border-radius: 5px; font-size: 0.6rem; cursor: pointer; margin-left: 5px; font-weight: bold; }
-        
-        /* TOMBOL AUDIT BARU */
-        .btn-audit { width:100%; padding:10px; background:none; border:1px solid #e74c3c; color:#e74c3c; border-radius:10px; font-size:0.75rem; margin-top:10px; cursor:pointer; font-weight:bold; }
-        .btn-audit:hover { background: #e74c3c; color: white; }
     </style>
 </head>
 <body>
@@ -48,7 +44,7 @@
     <div id="walletPanel" style="display:none;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
             <div style="text-align:left;">
-                <span style="font-size: 0.65rem; color: #f1c40f; letter-spacing: 1px; font-weight: bold;">NUSWANTARA v20.5</span><br>
+                <span style="font-size: 0.65rem; color: #f1c40f; letter-spacing: 1px; font-weight: bold;">NUSWANTARA v20.6</span><br>
                 <div style="display:flex; align-items:center;">
                     <div id="myIDDisplay" class="id-badge">ID: ...</div>
                     <button onclick="forceReport()" class="btn-report">📡 LAPOR</button>
@@ -70,8 +66,6 @@
                     <div id="silverGram" style="color: #bdc3c7; font-size: 0.9rem; font-weight: bold;">0.000g</div><div style="font-size: 0.55rem; color: #666;">EQ. PERAK (Ag)</div>
                 </div>
             </div>
-            
-            <button onclick="auditWallet()" class="btn-audit" id="btnAudit">🔍 CEK KEASLIAN SALDO (AUDIT)</button>
         </div>
 
         <div id="scanner-wrapper" style="display:none; margin-bottom: 15px; position:relative;">
@@ -91,17 +85,20 @@
         </div>
 
         <div style="background:#111; padding:15px; border-radius:15px; border: 1px solid #222; margin-bottom:15px;">
-            <label style="font-size: 0.7rem; color: #f1c40f; font-weight:bold; display:block; margin-bottom:10px;">KIRIM CEPAT:</label>
+            <label style="font-size: 0.7rem; color: #f1c40f; font-weight:bold; display:block; margin-bottom:10px;">KIRIM CEPAT (DINAR EMAS):</label>
             <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom:15px;">
                 <button onclick="quickSend(20115, '1/4 Dn')" class="btn-action" style="font-size:0.55rem; padding:10px 0; background:#1a1a1a; color:#ffd700; border:1px solid #444; border-radius:8px;">1/4 Dn</button>
                 <button onclick="quickSend(40230, '1/2 Dn')" class="btn-action" style="font-size:0.55rem; padding:10px 0; background:#1a1a1a; color:#ffd700; border:1px solid #444; border-radius:8px;">1/2 Dn</button>
                 <button onclick="quickSend(80460, '1 Dn')" class="btn-action" style="font-size:0.55rem; padding:10px 0; background:#222; color:#ffd700; border:1px solid #f1c40f; border-radius:8px; font-weight:bold;">1 Dn</button>
                 <button onclick="quickSend(160920, '2 Dn')" class="btn-action" style="font-size:0.55rem; padding:10px 0; background:#222; color:#ffd700; border:1px solid #f1c40f; border-radius:8px; font-weight:bold;">2 Dn</button>
             </div>
+            
+            <label style="font-size: 0.7rem; color: #bdc3c7; font-weight:bold; display:block; margin-bottom:10px;">KIRIM CEPAT (DIRHAM PERAK):</label>
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
                 <button onclick="quickSend(745, '1/4 Dr')" class="btn-action" style="font-size:0.6rem; padding:10px 0; background:#1a1a1a; color:#fff; border:1px solid #bdc3c7; border-radius:8px;">1/4 Dr</button>
                 <button onclick="quickSend(1490, '1/2 Dr')" class="btn-action" style="font-size:0.6rem; padding:10px 0; background:#1a1a1a; color:#fff; border:1px solid #bdc3c7; border-radius:8px;">1/2 Dr</button>
                 <button onclick="quickSend(2235, '3/4 Dr')" class="btn-action" style="font-size:0.6rem; padding:10px 0; background:#1a1a1a; color:#fff; border:1px solid #bdc3c7; border-radius:8px;">3/4 Dr</button>
+                
                 <button onclick="quickSend(2980, '1 Dr')" class="btn-action" style="font-size:0.6rem; padding:10px 0; background:#333; color:#fff; border:1px solid #bdc3c7; border-radius:8px; font-weight:bold;">1 Dr</button>
                 <button onclick="quickSend(5960, '2 Dr')" class="btn-action" style="font-size:0.6rem; padding:10px 0; background:#333; color:#fff; border:1px solid #bdc3c7; border-radius:8px; font-weight:bold;">2 Dr</button>
                 <button onclick="quickSend(14900, '5 Dr')" class="btn-action" style="font-size:0.6rem; padding:10px 0; background:#333; color:#fff; border:1px solid #bdc3c7; border-radius:8px; font-weight:bold;">5 Dr</button>
@@ -176,62 +173,6 @@ if(savedKey === "") {
     } else {
         document.getElementById('lockScreen').style.display = "block"; 
     }
-}
-
-// --- FUNGSI AUDIT / RAZIA SALDO (BARU) ---
-async function auditWallet() {
-    if(!confirm("Cek keaslian saldo di Bank Sentral?\nSaldo hangus (sudah dibakar bank) akan dihapus.")) return;
-    
-    let btn = document.getElementById('btnAudit');
-    btn.innerText = "⏳ Memeriksa keaslian uang...";
-    btn.disabled = true;
-
-    let burnedCount = 0;
-    let burnedAmount = 0;
-
-    // Loop semua history yang 'MASUK' dan belum ditandai hangus
-    for(let item of history) {
-        if(item.t === 'MASUK' && !item.label.includes("HANGUS")) {
-            // Cek Nonce dari token raw
-            try {
-                let raw = item.raw || ""; // Simpan raw token di history? (Perlu update execClaim)
-                // Kalau history lama ga ada raw, kita skip atau coba decode label (susah).
-                // Asumsi: di versi ini kita mulai simpan raw di history saat claim.
-                
-                // Jika history lama belum simpan raw, kita gak bisa cek.
-                // TAPI: token ID (Nonce) ada di raw.
-                if(raw.startsWith("TOKEN-")) {
-                   let decoded = atob(raw.replace("TOKEN-", ""));
-                   let nonce = decoded.split(":")[2].split("|")[0]; // payload format: amount:time:nonce
-                   let mg = parseInt(decoded.split(":")[0]);
-
-                   // Cek ke Database
-                   let res = await fetch(`${DB_URL}used_tokens/${nonce}.json`);
-                   let data = await res.json();
-
-                   // KONDISI HANGUS: Data ada DAN burned=true
-                   if(data && data.burned === true) {
-                       item.t = "HANGUS (BANK)";
-                       item.label += " [INVALID]";
-                       burnedCount++;
-                       burnedAmount += mg;
-                   }
-                }
-            } catch(e) { console.log("Skip item rusak"); }
-        }
-    }
-
-    if(burnedCount > 0) {
-        totalMg -= burnedAmount;
-        if(totalMg < 0) totalMg = 0; // Jangan sampai minus
-        updateUI();
-        alert(`⚠️ PERINGATAN!\nDitemukan ${burnedCount} token palsu/hangus.\nSaldo dikurangi: ${(burnedAmount/2980).toFixed(2)} Dr`);
-    } else {
-        alert("✅ AMAN! Semua token valid.");
-    }
-
-    btn.innerText = "🔍 CEK KEASLIAN SALDO (AUDIT)";
-    btn.disabled = false;
 }
 
 // --- FUNGSI LAPOR DARURAT ---
