@@ -3,13 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nuswantara Wallet v19.4</title>
+    <title>Nuswantara Wallet v19.6</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         body { background-color: #111; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
         .btn-action { cursor: pointer; transition: 0.2s; }
         .btn-action:active { transform: scale(0.95); }
+        .file-btn { background: #333; color: #aaa; border: 1px dashed #555; padding: 10px; width: 100%; border-radius: 10px; margin-top: 10px; cursor: pointer; font-size: 0.8rem; display:block; box-sizing:border-box; text-align:center;}
+        .btn-scan-key { width:100%; padding:15px; background:#3498db; color:white; border:none; border-radius:12px; font-weight:bold; font-size: 1rem; margin-bottom:10px; cursor:pointer; }
     </style>
 </head>
 <body>
@@ -19,14 +21,30 @@
     <div id="lockScreen" style="display:none; text-align: center; padding: 20px;">
         <div style="font-size: 3.5rem; margin-bottom: 10px;">🔐</div>
         <h3 id="lockTitle" style="color:#f1c40f; margin-bottom: 25px; letter-spacing: 2px;">WALLET TERKUNCI</h3>
-        <input type="password" id="loginKey" placeholder="Private Key Pameran" style="width:100%; padding:15px; margin-bottom:12px; background:#111; border:1px solid #333; color:#fff; border-radius:12px; text-align:center; font-size: 1rem; box-sizing: border-box;">
+        
+        <div id="setupReaderWrapper" style="display:none; margin-bottom: 15px; position:relative;">
+            <div id="setupReader" style="width:100%; border-radius:15px; overflow:hidden; border:2px solid #3498db;"></div>
+            <button onclick="stopSetupScan()" style="position:absolute; top:10px; right:10px; background:#e74c3c; color:white; border:none; padding:5px 12px; border-radius:8px; z-index:100; cursor:pointer; font-weight:bold;">X</button>
+        </div>
+
+        <button onclick="startSetupScan()" class="btn-scan-key">📷 SCAN KUNCI OTORITAS</button>
+        
+        <label class="file-btn" style="margin-bottom:15px;">
+            📂 UPLOAD QR KUNCI
+            <input type="file" accept="image/*" onchange="scanFromFile(this, 'loginKey')" style="display:none;">
+        </label>
+
+        <p style="font-size:0.7rem; color:#555; margin:10px 0;">--- ATAU INPUT MANUAL ---</p>
+
+        <input type="password" id="loginKey" placeholder="Paste Private Key Disini..." style="width:100%; padding:15px; margin-bottom:12px; background:#111; border:1px solid #333; color:#fff; border-radius:12px; text-align:center; font-size: 0.9rem; box-sizing: border-box; font-family:monospace;">
         <input type="number" id="loginPin" placeholder="PIN Wallet (4-Digit)" style="width:100%; padding:15px; margin-bottom:20px; background:#111; border:1px solid #333; color:#fff; border-radius:12px; text-align:center; font-size: 1rem; box-sizing: border-box;">
+        
         <button onclick="unlockWallet()" class="btn-action" style="width:100%; padding:15px; background:#f1c40f; color:#000; border:none; border-radius:12px; font-weight:bold; font-size: 1rem;">BUKA BRANKAS</button>
     </div>
 
     <div id="walletPanel" style="display:none;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <span style="font-size: 0.65rem; color: #f1c40f; letter-spacing: 1px; font-weight: bold;">NUSWANTARA v19.4</span>
+            <span style="font-size: 0.65rem; color: #f1c40f; letter-spacing: 1px; font-weight: bold;">NUSWANTARA v19.6</span>
             <button onclick="logout()" style="background:#222; color:#555; border:none; padding:4px 10px; border-radius:8px; font-size:0.6rem; cursor:pointer;">LOGOUT</button>
         </div>
 
@@ -55,6 +73,10 @@
 
         <div id="scanner-wrapper" style="display:none; margin-bottom: 15px; position:relative;">
             <div id="reader" style="width:100%; border-radius:15px; overflow:hidden; border:2px solid #f1c40f;"></div>
+            <label class="file-btn">
+                📂 UPLOAD FOTO QR
+                <input type="file" accept="image/*" onchange="scanFromFile(this, 'tokenIn')" style="display:none;">
+            </label>
             <button onclick="stopScanner()" style="position:absolute; top:10px; right:10px; background:#e74c3c; color:white; border:none; padding:5px 12px; border-radius:8px; z-index:100; cursor:pointer; font-weight:bold;">TUTUP [X]</button>
         </div>
 
@@ -108,7 +130,7 @@
 const DB_URL = "https://pasarnuswantara-default-rtdb.asia-southeast1.firebasedatabase.app/";
 const MG_PER_DIRHAM = 2980;
 const MG_PER_DINAR = 80460;
-// 🔥 SANERING DATE (Ganti dengan Date.now() saat reset)
+// 🔥 SANERING DATE 
 const SANERING_TIMESTAMP = 1734748000000; 
 
 // --- STATE MANAGEMENT ---
@@ -117,6 +139,7 @@ let savedPin = localStorage.getItem('nw_pin') || "";
 let totalMg = parseInt(localStorage.getItem('nw_mg')) || 0;
 let history = JSON.parse(localStorage.getItem('nw_hist')) || [];
 let html5QrCode;
+let setupQrCode; // Instance Khusus Setup
 
 // --- SMART LABEL DETECTOR ---
 function getAutoLabel(mg) {
@@ -133,36 +156,51 @@ function getAutoLabel(mg) {
     return (mg/2980).toFixed(2) + " Dr";
 }
 
-// --- CORE SYSTEM: LAPOR SENSUS (AUTO-ANONIM) ---
+// --- CORE SYSTEM: SENSUS ---
 async function reportToCentral() {
     let myID = localStorage.getItem('nw_name');
-    
-    // Auto-Generate ID Anonim dari Kunci (jika belum ada)
-    if (!myID) {
-        if(savedKey) {
-            // Ambil 5 karakter terakhir kunci biar unik tapi anonim
-            myID = "WARGA-" + savedKey.substring(savedKey.length - 5).toUpperCase(); 
-            localStorage.setItem('nw_name', myID);
-        } else {
-            return; // Belum login
-        }
+    if (!myID && savedKey) {
+        myID = "WARGA-" + savedKey.substring(savedKey.length - 5).toUpperCase(); 
+        localStorage.setItem('nw_name', myID);
     }
-
-    // Kirim Laporan ke Firebase
-    try {
-        await fetch(`${DB_URL}census_report/${myID}.json`, {
-            method: 'PUT',
-            body: JSON.stringify({
-                name: myID,
-                balance_mg: totalMg,
-                dinar: (totalMg / 80460).toFixed(2),
-                last_active: Date.now()
-            })
-        });
-    } catch(e) { console.log("Offline / Sensus Pending"); }
+    if(myID) {
+        try {
+            await fetch(`${DB_URL}census_report/${myID}.json`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    name: myID,
+                    balance_mg: totalMg,
+                    dinar: (totalMg / 80460).toFixed(2),
+                    last_active: Date.now()
+                })
+            });
+        } catch(e) { console.log("Offline / Sensus Pending"); }
+    }
 }
 
-// --- SECURITY SYSTEM ---
+// --- SECURITY & SETUP SYSTEM ---
+
+// 1. Fungsi Scan Kunci Login
+function startSetupScan() {
+    document.getElementById('setupReaderWrapper').style.display = 'block';
+    setupQrCode = new Html5Qrcode("setupReader");
+    setupQrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, 
+    (decodedText) => {
+        document.getElementById('loginKey').value = decodedText; // Isi field
+        stopSetupScan();
+        alert("Kunci Terbaca! Masukkan PIN.");
+    }, (errorMessage) => {});
+}
+
+function stopSetupScan() {
+    if(setupQrCode) {
+        setupQrCode.stop().then(() => { document.getElementById('setupReaderWrapper').style.display = 'none'; });
+    } else {
+        document.getElementById('setupReaderWrapper').style.display = 'none';
+    }
+}
+
+// 2. Fungsi Login
 function unlockWallet() {
     let k = document.getElementById('loginKey').value.trim();
     let p = document.getElementById('loginPin').value.trim();
@@ -191,12 +229,10 @@ function updateUI() {
     document.getElementById('goldGram').innerText = (td * (4.25/27)).toFixed(3) + "g";
     localStorage.setItem('nw_mg', totalMg);
     renderLog();
-    
-    // 🔥 TRIGGER SENSUS 🔥
-    reportToCentral();
+    reportToCentral(); // Trigger Sensus
 }
 
-// --- QR SCANNER SYSTEM ---
+// --- QR SCANNER UTAMA (TRANSAKSI) ---
 function startScanner() {
     document.getElementById('scanner-wrapper').style.display = 'block';
     html5QrCode = new Html5Qrcode("reader");
@@ -207,9 +243,27 @@ function startScanner() {
         execClaim();
     }, (errorMessage) => {});
 }
+
+// FUNGSI SCAN FILE (Universal buat Login & Transaksi)
+function scanFromFile(inputEl, targetId) {
+    if (inputEl.files.length === 0) return;
+    // Pakai div scanner sementara
+    let scannerId = targetId === 'loginKey' ? 'setupReader' : 'reader';
+    const tempScanner = new Html5Qrcode(scannerId); 
+    tempScanner.scanFile(inputEl.files[0], true)
+        .then(decodedText => {
+            document.getElementById(targetId).value = decodedText;
+            if(targetId === 'loginKey') { stopSetupScan(); alert("Kunci Terbaca!"); }
+            else { stopScanner(); execClaim(); }
+        })
+        .catch(err => { alert("Gagal baca QR dari gambar!"); });
+}
+
 function stopScanner() {
     if(html5QrCode) {
         html5QrCode.stop().then(() => { document.getElementById('scanner-wrapper').style.display = 'none'; });
+    } else {
+        document.getElementById('scanner-wrapper').style.display = 'none';
     }
 }
 function toggleClaimManual() {
@@ -224,7 +278,7 @@ function createSig(d, k) {
     return Math.abs(h).toString(36);
 }
 
-// --- CLAIM LOGIC (MASUK) ---
+// --- CLAIM LOGIC ---
 async function execClaim() {
     let input = document.getElementById('tokenIn').value.replace("TOKEN-", "").trim();
     if(!input) return;
@@ -237,7 +291,6 @@ async function execClaim() {
         let amtMg = parseInt(mg);
         let tokenTime = parseInt(timeStr);
         
-        // 🔥 CEK SANERING (KADALUARSA) 🔥
         if (tokenTime < SANERING_TIMESTAMP) {
             throw "⚠️ UANG KADALUARSA! (Token sebelum Reset Sistem)";
         }
@@ -254,12 +307,10 @@ async function execClaim() {
         let cantikLabel = getAutoLabel(amtMg);
 
         history.unshift({
-            t: 'MASUK', 
-            label: cantikLabel,
-            time: new Date().toLocaleTimeString()
+            t: 'MASUK', label: cantikLabel, time: new Date().toLocaleTimeString()
         });
         
-        updateUI(); // Akan memicu sensus juga
+        updateUI();
         alert("BERHASIL! Saldo masuk.");
         document.getElementById('manualClaim').style.display = 'none';
         document.getElementById('tokenIn').value = "";
@@ -267,7 +318,7 @@ async function execClaim() {
     } catch(e) { alert("GAGAL: " + e); }
 }
 
-// --- SEND LOGIC (KELUAR) ---
+// --- SEND LOGIC ---
 function quickSend(mg, label) {
     if (mg > totalMg) return alert("SALDO TIDAK CUKUP!");
     let p = prompt(`KONFIRMASI KIRIM ${label}\nMasukkan PIN Wallet:`);
@@ -275,23 +326,17 @@ function quickSend(mg, label) {
 
     totalMg -= mg;
     const nonce = "W-" + Math.random().toString(36).substring(2, 7).toUpperCase();
-    
-    // TIMESTAMP UNTUK SANERING
     const payload = `${mg}:${Date.now()}:${nonce}`;
     const token = "TOKEN-" + btoa(payload + "|" + createSig(payload, savedKey));
 
-    updateUI(); // Akan memicu sensus juga
+    updateUI();
     document.getElementById('qrResult').style.display = 'block';
     document.getElementById('qrcode').innerHTML = "";
     new QRCode(document.getElementById("qrcode"), { text: token, width: 200, height: 200 });
     document.getElementById('textToken').innerText = token;
     
-    // Log Keluar pake Label dari Tombol
     history.unshift({
-        t: 'KELUAR', 
-        label: label, 
-        raw: token, 
-        time: new Date().toLocaleTimeString()
+        t: 'KELUAR', label: label, raw: token, time: new Date().toLocaleTimeString()
     });
     renderLog();
 }
