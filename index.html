@@ -378,4 +378,37 @@ if(savedKey === "") {
 </script>
 
 </body>
+    <div style="position:fixed; bottom:10px; right:10px; opacity:0.8;">
+    <button onclick="debugForceReport()" style="background:red; color:white; border:none; padding:5px 10px; font-size:0.7rem; border-radius:5px;">⚠️ TES LAPOR</button>
+</div>
+    async function debugForceReport() {
+    let myID = localStorage.getItem('nw_name');
+    if (!myID) { 
+        alert("ID Warga belum ada! Login dulu atau refresh."); 
+        return;
+    }
+
+    alert(`Mencoba melapor sebagai: ${myID}\nSaldo: ${totalMg} mg...`);
+
+    try {
+        let response = await fetch(`${DB_URL}census_report/${myID}.json`, {
+            method: 'PUT',
+            body: JSON.stringify({
+                name: myID,
+                balance_mg: totalMg,
+                dinar: (totalMg / 80460).toFixed(2),
+                last_active: Date.now()
+            })
+        });
+
+        if (response.ok) {
+            alert("✅ LAPORAN SUKSES! Data diterima server.\nSekarang cek Monitor.");
+        } else {
+            alert("⛔ DITOLAK SERVER!\nStatus: " + response.status + " " + response.statusText + "\n(Kemungkinan Firebase Rules belum Write: True)");
+        }
+    } catch(e) {
+        alert("❌ ERROR KONEKSI:\n" + e.message + "\n(Cek internet atau URL Database)");
+    }
+}
 </html>
+
