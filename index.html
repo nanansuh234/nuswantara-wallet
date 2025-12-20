@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nuswantara Wallet v20.3</title>
+    <title>Nuswantara Wallet v20.4</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
@@ -12,11 +12,14 @@
         .btn-action:active { transform: scale(0.95); }
         .file-btn { background: #333; color: #aaa; border: 1px dashed #555; padding: 10px; width: 100%; border-radius: 10px; margin-top: 10px; cursor: pointer; font-size: 0.8rem; display:block; box-sizing:border-box; text-align:center;}
         .btn-scan-key { width:100%; padding:15px; background:#3498db; color:white; border:none; border-radius:12px; font-weight:bold; font-size: 1rem; margin-bottom:10px; cursor:pointer; }
+        
         #paymentModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:2000; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding:20px; box-sizing:border-box; }
         .pay-card { background:#1a1a1a; padding:30px; border-radius:20px; border:2px solid #f1c40f; width:100%; max-width:400px; }
         
-        /* ID BADGE STATIC (GAK BISA DIKLIK) */
-        .id-badge { background: #000; color: #aaa; padding: 5px 10px; border-radius: 5px; font-size: 0.65rem; margin-top: 5px; border: 1px solid #333; display: inline-block; font-family: monospace; letter-spacing: 1px; }
+        /* TOMBOL LAPOR DARURAT */
+        .id-badge { background: #000; color: #aaa; padding: 5px 8px; border-radius: 5px; font-size: 0.65rem; margin-top: 5px; border: 1px solid #333; display: inline-block; font-family: monospace; letter-spacing: 1px; }
+        .btn-report { background: #e67e22; color: white; border: none; padding: 5px 10px; border-radius: 5px; font-size: 0.6rem; cursor: pointer; margin-left: 5px; font-weight: bold; }
+        .btn-report:active { transform: scale(0.95); }
     </style>
 </head>
 <body>
@@ -43,8 +46,11 @@
     <div id="walletPanel" style="display:none;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
             <div style="text-align:left;">
-                <span style="font-size: 0.65rem; color: #f1c40f; letter-spacing: 1px; font-weight: bold;">NUSWANTARA v20.3</span><br>
-                <div id="myIDDisplay" class="id-badge">ID: ...</div>
+                <span style="font-size: 0.65rem; color: #f1c40f; letter-spacing: 1px; font-weight: bold;">NUSWANTARA v20.4</span><br>
+                <div style="display:flex; align-items:center;">
+                    <div id="myIDDisplay" class="id-badge">ID: ...</div>
+                    <button onclick="forceReport()" class="btn-report">📡 LAPOR</button>
+                </div>
             </div>
             <button onclick="logout()" style="background:#222; color:#555; border:none; padding:4px 10px; border-radius:8px; font-size:0.6rem; cursor:pointer;">LOGOUT</button>
         </div>
@@ -141,7 +147,7 @@ let savedKey = localStorage.getItem('nw_key') || "";
 let savedPin = localStorage.getItem('nw_pin') || "";
 let totalMg = parseInt(localStorage.getItem('nw_mg')) || 0;
 let history = JSON.parse(localStorage.getItem('nw_hist')) || [];
-let myID = localStorage.getItem('nw_name'); // Ambil ID yang tersimpan
+let myID = localStorage.getItem('nw_name');
 let html5QrCode;
 let setupQrCode;
 
@@ -149,12 +155,11 @@ const urlParams = new URLSearchParams(window.location.search);
 let payAmount = urlParams.get('pay');
 let payTo = urlParams.get('to');
 
-// --- AUTO GENERATE ID (HANYA SEKALI SEUMUR HIDUP WALLET) ---
+// --- AUTO GENERATE ID ---
 if (savedKey && !myID) {
-    // Generate kode unik acak
     let randomCode = Math.random().toString(36).substring(2, 7).toUpperCase();
     myID = "WARGA-" + randomCode;
-    localStorage.setItem('nw_name', myID); // Simpan Permanen
+    localStorage.setItem('nw_name', myID);
 }
 
 if(savedKey === "") {
@@ -170,6 +175,27 @@ if(savedKey === "") {
     } else {
         document.getElementById('lockScreen').style.display = "block"; 
     }
+}
+
+// --- FUNGSI LAPOR DARURAT ---
+async function forceReport() {
+    if(!myID) return alert("Error: ID Warga tidak ditemukan.");
+    let btn = document.querySelector('.btn-report');
+    btn.innerText = "⏳...";
+    btn.disabled = true;
+
+    try {
+        await fetch(`${DB_URL}census_report/${myID}.json`, {
+            method: 'PUT',
+            body: JSON.stringify({ name: myID, balance_mg: totalMg, dinar: (totalMg / 80460).toFixed(2), last_active: Date.now() })
+        });
+        alert("✅ LAPORAN SENSUS TERKIRIM!");
+    } catch(e) {
+        alert("Gagal Lapor (Offline?)");
+    }
+    
+    btn.innerText = "📡 LAPOR";
+    btn.disabled = false;
 }
 
 async function processPayment() {
@@ -247,7 +273,7 @@ function unlockWallet() {
 function logout() { location.reload(); }
 
 function updateUI() {
-    document.getElementById('myIDDisplay').innerText = myID; // Tampilkan ID Permanen
+    document.getElementById('myIDDisplay').innerText = myID; 
     let td = totalMg / MG_PER_DIRHAM;
     document.getElementById('valDinar').innerText = Math.floor(td / 27);
     document.getElementById('valDirham').innerText = (td % 27).toFixed(2);
@@ -255,7 +281,7 @@ function updateUI() {
     document.getElementById('goldGram').innerText = (td * (4.25/27)).toFixed(3) + "g";
     localStorage.setItem('nw_mg', totalMg);
     renderLog();
-    reportToCentral();
+    reportToCentral(); // Auto report tetap jalan
 }
 
 function startScanner() {
