@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nuswantara Wallet v20.6</title>
+    <title>Nuswantara Wallet v20.7</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
@@ -44,7 +44,7 @@
     <div id="walletPanel" style="display:none;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
             <div style="text-align:left;">
-                <span style="font-size: 0.65rem; color: #f1c40f; letter-spacing: 1px; font-weight: bold;">NUSWANTARA v20.6</span><br>
+                <span style="font-size: 0.65rem; color: #f1c40f; letter-spacing: 1px; font-weight: bold;">NUSWANTARA v20.7</span><br>
                 <div style="display:flex; align-items:center;">
                     <div id="myIDDisplay" class="id-badge">ID: ...</div>
                     <button onclick="forceReport()" class="btn-report">📡 LAPOR</button>
@@ -143,7 +143,7 @@ const SANERING_TIMESTAMP = 1734748000000;
 // --- STATE ---
 let savedKey = localStorage.getItem('nw_key') || "";
 let savedPin = localStorage.getItem('nw_pin') || "";
-let totalMg = parseInt(localStorage.getItem('nw_mg')) || 0;
+let totalMg = parseInt(localStorage.getItem('nw_mg')); // Bisa NaN
 let history = JSON.parse(localStorage.getItem('nw_hist')) || [];
 let myID = localStorage.getItem('nw_name');
 let html5QrCode;
@@ -152,6 +152,39 @@ let setupQrCode;
 const urlParams = new URLSearchParams(window.location.search);
 let payAmount = urlParams.get('pay');
 let payTo = urlParams.get('to');
+
+// --- 🔥 AUTO-HEAL: FIX WALLET NaN 🔥 ---
+// Fungsi ini menghitung ulang saldo dari 0 berdasarkan sejarah
+function healWalletData() {
+    console.log("Menjalankan Auto-Heal Wallet...");
+    totalMg = 0;
+    
+    // Reverse loop (karena history kita unshift/terbaru diatas, kita butuh hitung dari lama)
+    // Atau simply loop semua: MASUK (+), KELUAR (-)
+    history.slice().reverse().forEach(h => {
+        let val = 0;
+        // Parse Label (Contoh: "1 Dr", "2 Dn")
+        if(h.label.includes("Dn")) {
+            val = parseFloat(h.label) * MG_PER_DINAR;
+        } else if(h.label.includes("Dr")) {
+            val = parseFloat(h.label) * MG_PER_DIRHAM;
+        }
+
+        if(h.t.includes("MASUK")) {
+            totalMg += val;
+        } else if(h.t.includes("KELUAR")) {
+            totalMg -= val;
+        }
+    });
+
+    if(totalMg < 0) totalMg = 0; // Safety
+    localStorage.setItem('nw_mg', totalMg);
+}
+
+// Cek NaN saat Load
+if (isNaN(totalMg) || totalMg === null) {
+    healWalletData();
+}
 
 // --- AUTO GENERATE ID ---
 if (savedKey && !myID) {
@@ -211,7 +244,10 @@ function startSetupScan() { document.getElementById('setupReaderWrapper').style.
 function stopSetupScan() { if(setupQrCode) setupQrCode.stop().then(() => { document.getElementById('setupReaderWrapper').style.display = 'none'; }); }
 function unlockWallet() { let k = document.getElementById('loginKey').value.trim(); let p = document.getElementById('loginPin').value.trim(); if(savedKey === "") { if(k.length < 4) return alert("Setup Gagal"); localStorage.setItem('nw_key', k); localStorage.setItem('nw_pin', p); location.reload(); } else { if(k === savedKey && p === savedPin) { document.getElementById('lockScreen').style.display = "none"; document.getElementById('walletPanel').style.display = "block"; updateUI(); } else { alert("AKSES DITOLAK"); } } }
 function logout() { location.reload(); }
-function updateUI() { document.getElementById('myIDDisplay').innerText = myID; let td = totalMg / MG_PER_DIRHAM; document.getElementById('valDinar').innerText = Math.floor(td / 27); document.getElementById('valDirham').innerText = (td % 27).toFixed(2); document.getElementById('silverGram').innerText = (totalMg / 1000).toFixed(3) + "g"; document.getElementById('goldGram').innerText = (td * (4.25/27)).toFixed(3) + "g"; localStorage.setItem('nw_mg', totalMg); renderLog(); reportToCentral(); }
+function updateUI() { 
+    if(isNaN(totalMg)) healWalletData(); // Double Check UI
+    document.getElementById('myIDDisplay').innerText = myID; let td = totalMg / MG_PER_DIRHAM; document.getElementById('valDinar').innerText = Math.floor(td / 27); document.getElementById('valDirham').innerText = (td % 27).toFixed(2); document.getElementById('silverGram').innerText = (totalMg / 1000).toFixed(3) + "g"; document.getElementById('goldGram').innerText = (td * (4.25/27)).toFixed(3) + "g"; localStorage.setItem('nw_mg', totalMg); renderLog(); reportToCentral(); 
+}
 function startScanner() { document.getElementById('scanner-wrapper').style.display = 'block'; html5QrCode = new Html5Qrcode("reader"); html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (decodedText) => { stopScanner(); document.getElementById('tokenIn').value = decodedText; execClaim(); }, (errorMessage) => {}); }
 function scanFromFile(inputEl, targetId) { if (inputEl.files.length === 0) return; let scannerId = targetId === 'loginKey' ? 'setupReader' : 'reader'; const tempScanner = new Html5Qrcode(scannerId); tempScanner.scanFile(inputEl.files[0], true).then(decodedText => { document.getElementById(targetId).value = decodedText; if(targetId === 'loginKey') { stopSetupScan(); alert("Kunci Terbaca!"); } else { stopScanner(); execClaim(); } }).catch(err => { alert("Gagal baca QR!"); }); }
 function stopScanner() { if(html5QrCode) html5QrCode.stop().then(() => { document.getElementById('scanner-wrapper').style.display = 'none'; }); }
@@ -230,13 +266,11 @@ async function execClaim() {
         
         const check = await fetch(`${DB_URL}used_tokens/${nonce}.json`);
         const cloudData = await check.json();
-        // Cuma cek kalau claimed/burned DULUAN. Kalau belum, kita claim.
         if(cloudData && (cloudData.claimed || cloudData.burned)) throw "Token Sudah Dipakai!";
         await fetch(`${DB_URL}used_tokens/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ claimed: true, at: new Date().toISOString() }) });
         
         totalMg += amtMg;
         let cantikLabel = getAutoLabel(amtMg);
-        // PENTING: SIMPAN RAW TOKEN BIAR BISA DIAUDIT NANTI
         history.unshift({ t: 'MASUK', label: cantikLabel, raw: input, time: new Date().toLocaleTimeString() });
         updateUI(); alert("BERHASIL! Saldo masuk.");
         document.getElementById('manualClaim').style.display = 'none'; document.getElementById('tokenIn').value = "";
@@ -249,7 +283,7 @@ async function quickSend(mg, label) {
     if(p !== savedPin) return alert("PIN SALAH!");
     totalMg -= mg;
     const nonce = "W-" + Math.random().toString(36).substring(2, 7).toUpperCase();
-    const token = "TOKEN-" + btoa(`${payAmount}:${Date.now()}:${nonce}` + "|" + createSig(`${payAmount}:${Date.now()}:${nonce}`, savedKey));
+    const token = "TOKEN-" + btoa(`${mg}:${Date.now()}:${nonce}` + "|" + createSig(`${mg}:${Date.now()}:${nonce}`, savedKey)); // Fix Payload
     fetch(`${DB_URL}issued_tokens/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ issuer: myID, amount: mg, created_at: Date.now() }) });
     fetch(`${DB_URL}public_ledger/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ type: 'TRANSFER', label: label, val: mg, timestamp: Date.now(), tx_id: nonce, sender: myID }) });
     updateUI();
