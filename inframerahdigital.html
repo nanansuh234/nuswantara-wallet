@@ -1,0 +1,215 @@
+\<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VALIDATOR SECURE v3.0</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; }
+        .box { width: 100%; max-width: 500px; border: 1px solid #333; padding: 25px; border-radius: 15px; background: #111; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); position: relative; }
+        
+        h2 { margin-top: 0; text-align: center; letter-spacing: 2px; text-transform: uppercase; font-size: 1.2rem; }
+        
+        /* STATUS INDIKATOR DI POJOK KANAN ATAS */
+        .status-badge { position: absolute; top: 15px; right: 15px; font-size: 0.6rem; padding: 5px 10px; border-radius: 20px; font-weight: bold; }
+        .locked { background: #e74c3c; color: #fff; box-shadow: 0 0 10px #e74c3c; }
+        .unlocked { background: #2ecc71; color: #000; box-shadow: 0 0 10px #2ecc71; }
+
+        input { width: 100%; padding: 15px; background: #222; border: 1px solid #444; color: #fff; margin-bottom: 10px; border-radius: 10px; box-sizing: border-box; text-align: center; font-family: monospace; }
+        
+        button { width: 100%; padding: 15px; font-weight: bold; cursor: pointer; border-radius: 10px; border: none; font-size: 1rem; transition: 0.2s; margin-bottom: 10px; }
+        button:active { transform: scale(0.98); }
+        
+        .btn-scan { background: linear-gradient(135deg, #3498db, #2980b9); color: white; }
+        .btn-key { background: linear-gradient(135deg, #f1c40f, #d35400); color: black; }
+        .btn-check { background: #333; color: #ddd; border: 1px solid #555; }
+        
+        .file-btn { display: block; background: #222; color: #888; padding: 10px; text-align: center; border-radius: 10px; border: 1px dashed #555; margin-bottom: 15px; cursor: pointer; font-size: 0.9rem; }
+
+        #resultBox { display: none; text-align: center; padding: 25px; border-radius: 15px; margin-top: 20px; border: 2px solid; animation: popIn 0.3s ease; }
+        @keyframes popIn { from{transform:scale(0.8); opacity:0;} to{transform:scale(1); opacity:1;} }
+        
+        .valid { border-color: #2ecc71; background: rgba(46, 204, 113, 0.1); color: #2ecc71; }
+        .fake { border-color: #e74c3c; background: rgba(231, 76, 60, 0.1); color: #e74c3c; }
+        .used { border-color: #e67e22; background: rgba(230, 126, 34, 0.1); color: #e67e22; }
+
+        #reader { width: 100%; border-radius: 10px; overflow: hidden; display: none; margin-bottom: 15px; border: 2px solid #555; }
+        .key-border { border-color: #f1c40f !important; }
+        .scan-border { border-color: #3498db !important; }
+    </style>
+</head>
+<body>
+
+    <div class="box">
+        <div id="statusBadge" class="status-badge locked">LOCKED</div>
+        
+        <h2 id="mainTitle" style="color:#e74c3c;">⛔ ALAT TERKUNCI</h2>
+        <p id="mainDesc" style="text-align:center; color:#777; font-size:0.8rem; margin-bottom:20px;">
+            Scan QR Kunci Otoritas (Network Key) untuk mengaktifkan alat ini.
+        </p>
+
+        <div id="reader"></div>
+        
+        <div id="actionArea">
+            <button onclick="startScan('KEY')" class="btn-key">🔑 SCAN KUNCI OTORITAS</button>
+            <label class="file-btn">
+                📂 UPLOAD QR KUNCI
+                <input type="file" accept="image/*" onchange="scanFromFile(this, 'KEY')" style="display:none;">
+            </label>
+        </div>
+
+        <div id="manualArea" style="display:none;">
+            <p style="text-align:center; color:#444; font-size:0.8rem; margin: 15px 0;">--- ATAU TEMPEL TOKEN ---</p>
+            <input type="text" id="tokenInput" placeholder="Paste TOKEN-...">
+            <button onclick="validateToken()" class="btn-check">VERIFIKASI MANUAL</button>
+            
+            <button onclick="logout()" style="background:none; border:none; color:#e74c3c; font-size:0.7rem; margin-top:20px; width:100%;">[X] Kunci Kembali Alat Ini</button>
+        </div>
+    </div>
+
+    <div id="resultBox"></div>
+
+<script>
+    const DB_URL = "https://pasarnuswantara-default-rtdb.asia-southeast1.firebasedatabase.app/";
+    let html5QrCode;
+    let ACTIVE_KEY = localStorage.getItem('validator_key_v3'); // Cek apakah key tersimpan
+
+    // --- INISIALISASI ---
+    if(ACTIVE_KEY) {
+        unlockUI();
+    }
+
+    // --- LOGIC UI (KUNCI vs BUKA) ---
+    function unlockUI() {
+        document.getElementById('statusBadge').className = "status-badge unlocked";
+        document.getElementById('statusBadge').innerText = "READY";
+        document.getElementById('mainTitle').innerText = "🔍 CEK KEASLIAN";
+        document.getElementById('mainTitle').style.color = "#3498db";
+        document.getElementById('mainDesc').innerText = "Alat aktif. Silakan scan token uang rakyat.";
+        
+        // Ganti Tombol jadi Mode Scan Uang
+        let html = `
+            <button onclick="startScan('TOKEN')" class="btn-scan">📷 SCAN QR TOKEN</button>
+            <label class="file-btn">
+                📂 UPLOAD QR TOKEN
+                <input type="file" accept="image/*" onchange="scanFromFile(this, 'TOKEN')" style="display:none;">
+            </label>
+        `;
+        document.getElementById('actionArea').innerHTML = html;
+        document.getElementById('manualArea').style.display = 'block';
+    }
+
+    function logout() {
+        localStorage.removeItem('validator_key_v3');
+        location.reload();
+    }
+
+    // --- FUNGSI SCANNER (SATU UNTUK SEMUA) ---
+    function startScan(mode) {
+        document.getElementById('reader').style.display = 'block';
+        
+        // Ubah warna border kamera biar user tau lagi scan apa
+        let readerDiv = document.getElementById('reader');
+        if(mode === 'KEY') readerDiv.className = "key-border";
+        else readerDiv.className = "scan-border";
+
+        html5QrCode = new Html5Qrcode("reader");
+        html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, 
+        (decodedText) => {
+            html5QrCode.stop();
+            document.getElementById('reader').style.display = 'none';
+            handleResult(decodedText, mode);
+        }, () => {});
+    }
+
+    function scanFromFile(inputEl, mode) {
+        if (inputEl.files.length === 0) return;
+        const tempScanner = new Html5Qrcode("reader");
+        tempScanner.scanFile(inputEl.files[0], true)
+            .then(decodedText => { handleResult(decodedText, mode); })
+            .catch(err => { alert("Gagal baca QR!"); });
+    }
+
+    // --- PENANGANAN HASIL SCAN ---
+    function handleResult(text, mode) {
+        if (mode === 'KEY') {
+            // Mode Setup Kunci
+            if (text.length < 5) { alert("Kunci terlalu pendek!"); return; }
+            localStorage.setItem('validator_key_v3', text);
+            ACTIVE_KEY = text;
+            alert("✅ KUNCI DITERIMA! Alat siap digunakan.");
+            unlockUI();
+        } else {
+            // Mode Cek Uang
+            document.getElementById('tokenInput').value = text;
+            validateToken();
+        }
+    }
+
+    // --- LOGIC VALIDASI (SAMA KAYAK SEBELUMNYA) ---
+    async function validateToken() {
+        if(!ACTIVE_KEY) return alert("Alat belum dikunci! Scan Key dulu.");
+        let raw = document.getElementById('tokenInput').value.trim();
+        let resBox = document.getElementById('resultBox');
+        
+        if(!raw) return alert("Scan atau Paste token dulu!");
+
+        // Reset UI
+        resBox.style.display = 'block';
+        resBox.className = "";
+        resBox.style.borderColor = "#555";
+        resBox.style.color = "#aaa";
+        resBox.innerHTML = "⏳ SEDANG MEMERIKSA KE DATABASE...";
+
+        try {
+            let cleanToken = raw.replace("TOKEN-", "");
+            let decoded = atob(cleanToken);
+            let [payload, sig] = decoded.split("|");
+            
+            // VERIFIKASI PAKE KEY HASIL SCAN TADI
+            let calcSig = createSig(payload, ACTIVE_KEY);
+
+            if (calcSig !== sig) {
+                showResult("FAKE", "⛔ UANG PALSU!", "Tanda tangan digital TIDAK COCOK. Kunci Otoritas yang Anda scan berbeda dengan pembuat token ini.");
+                return;
+            }
+
+            // CEK DATABASE
+            let [val, time, nonce] = payload.split(":");
+            let dbCheck = await fetch(`${DB_URL}used_tokens/${nonce}.json`);
+            let dbData = await dbCheck.json();
+
+            let nominalDn = (val / 80460).toFixed(4);
+            let nominalMg = parseInt(val).toLocaleString();
+
+            if (dbData && (dbData.claimed || dbData.burned)) {
+                showResult("USED", "⚠️ UANG SUDAH KADALUARSA", 
+                    `Token Asli, tapi sudah pernah dicairkan.<br><small>Waktu: ${new Date(dbData.at).toLocaleString()}</small>`);
+            } else {
+                showResult("VALID", "✅ UANG ASLI & BERLAKU", 
+                    `<div style="font-size:2rem; margin:10px 0;">${nominalDn} Dn</div>
+                    <small>Berat Fisik: ${nominalMg} mg</small><br>
+                    <small style="color:#aaa;">ID: ${nonce}</small>`);
+            }
+
+        } catch (e) {
+            showResult("FAKE", "⛔ FORMAT RUSAK", "Kode token tidak dikenali.");
+        }
+    }
+
+    function showResult(type, title, desc) {
+        let b = document.getElementById('resultBox');
+        b.className = type.toLowerCase();
+        b.innerHTML = `<h2 style="margin-top:0">${title}</h2><p>${desc}</p>`;
+    }
+
+    function createSig(d, k) {
+        let s = d + k; let h = 0;
+        for (let i = 0; i < s.length; i++) { h = ((h << 5) - h) + s.charCodeAt(i); h |= 0; }
+        return Math.abs(h).toString(36);
+    }
+</script>
+
+</body>
+</html>
