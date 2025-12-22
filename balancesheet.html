@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Balance Sheet Monitoring v5.4 (Hybrid Core)</title>
+    <title>Nuswantara Economic Monitor v5.5 (Date Fix)</title>
     <style>
         :root { --neon: #d4af37; --bg: #050505; --card: #111; --border: #333; }
         body { background-color: var(--bg); color: #e0e0e0; font-family: 'Segoe UI', monospace; margin: 0; padding: 20px; }
@@ -98,12 +98,12 @@
     <div class="sec-title">TOTAL ASET SISTEM (AUDIT SENSUS)</div>
     <div class="dashboard">
         <div class="card">
-            <div class="card-title">Stok Setara Emas (Dinar)</div>
+            <div class="card-title">Stok Emas (Dinar)</div>
             <div id="circDinar" class="card-val gold">0.00 Dn</div>
             <div class="card-note">Saldo Warga + Bank + Token Fisik</div>
         </div>
         <div class="card">
-            <div class="card-title">Stok Setara Perak (Dirham)</div>
+            <div class="card-title">Stok Perak (Dirham)</div>
             <div id="circDirham" class="card-val silver">0.00 Dr</div>
             <div class="card-note">Saldo Warga + Bank + Token Fisik</div>
         </div>
@@ -164,8 +164,9 @@
     const MG_PER_DIRHAM = 2980;
     const MG_PER_DINAR = 80460;
     
-    // CONFIG: Date Offset +1 Hari & Day Start jam 3
-    const DATE_OFFSET = 1; 
+    // --- KONFIGURASI TANGGAL ---
+    // Offset +3 biar sinkron: (22 + 3 = 25 Lumbung)
+    const DATE_OFFSET = 3; 
     const DAY_START_HOUR = 3;
     const DAILY_LIMIT = 1000;
 
@@ -258,7 +259,6 @@
         const tbody = document.getElementById('tableBody');
         try {
             // 1. FETCH PARALEL (Ledger + Census)
-            // Ini kunci perbaikannya: Kita baca ledger buat transaksi, dan census buat saldo total.
             let [resLedger, resCensus, resBank] = await Promise.all([
                 fetch(`${DB_URL}public_ledger.json`).then(r => r.json()),
                 fetch(`${DB_URL}census_report.json`).then(r => r.json()),
@@ -390,5 +390,3 @@
 
 </body>
 </html>
-
-
