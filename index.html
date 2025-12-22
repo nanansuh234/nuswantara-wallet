@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nuswantara Wallet v22.4 (Full Denom)</title>
+    <title>Nuswantara Wallet v22.4 (Fixed)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
@@ -193,8 +193,11 @@ let savedPass = localStorage.getItem('nw_pass') || "";
 let savedTxPin = localStorage.getItem('nw_tx_pin') || "";
 let totalMg = 0; 
 let history = [];
+
+// Load history dengan aman
 try {
-    history = JSON.parse(localStorage.getItem('nw_hist')) || [];
+    let rawHist = localStorage.getItem('nw_hist');
+    history = rawHist ? JSON.parse(rawHist) : [];
     if(!Array.isArray(history)) history = [];
 } catch(e) { history = []; }
 
@@ -208,8 +211,7 @@ if (savedKey && !myID) {
     localStorage.setItem('nw_name', myID);
 }
 
-recalcBalance();
-
+// Cek Login State
 if(savedKey === "") {
     document.getElementById('lockScreen').style.display = "block";
     document.getElementById('lockTitle').innerText = "SETUP WALLET BARU";
@@ -238,7 +240,7 @@ function unlockWallet() {
     if(savedKey === "") {
         if(k.length < 10) { msg.innerText = "Private Key terlalu pendek!"; return; }
         if(!validatePassword(p)) { 
-            msg.innerText = "Password Lemah! Harus min 6 karakter, ada huruf, angka, dan simbol unik."; 
+            msg.innerText = "Password Lemah! Minimal 6 karakter, kombinasi huruf & angka."; 
             return; 
         }
         localStorage.setItem('nw_key', k);
@@ -250,7 +252,10 @@ function unlockWallet() {
             document.getElementById('lockScreen').style.display = "none";
             document.getElementById('walletPanel').style.display = "block";
             if(!savedTxPin) document.getElementById('setupPinModal').style.display = 'flex';
-            fullRecovery();
+            
+            // Panggil sync sekali saat login sukses
+            fullRecovery(); 
+            checkInbox();
         } else {
             msg.innerText = "PASSWORD SALAH!";
             pInput.value = "";
@@ -267,7 +272,7 @@ function saveTxPin() {
     alert("PIN Tersimpan!");
 }
 
-// --- CORE RECOVERY SYSTEM (SMART MERGE v22.3) ---
+// --- CORE RECOVERY SYSTEM (FIXED) ---
 async function fullRecovery() {
     if(!myID) return;
     let statusEl = document.getElementById('syncStatus');
@@ -275,39 +280,46 @@ async function fullRecovery() {
     statusEl.style.color = "#f39c12";
 
     try {
+        // Cek Inbox juga saat tombol sync ditekan
+        checkInbox();
+
         let res = await fetch(`${DB_URL}public_ledger.json`);
         let ledger = await res.json();
         
+        // Handle jika ledger kosong (null) agar tidak error
+        if (!ledger) ledger = {};
+
         let cloudHistory = [];
         let seenTxIds = new Set(); 
 
-        if(ledger) {
-            for (let key in ledger) {
-                let tx = ledger[key];
-                let isMine = false, flow = "";
-                
-                if (tx.to === myID) { isMine = true; flow = "IN"; }
-                else if (tx.from === myID || tx.sender === myID) { isMine = true; flow = "OUT"; }
+        for (let key in ledger) {
+            let tx = ledger[key];
+            let isMine = false, flow = "";
+            
+            if (tx.to === myID) { isMine = true; flow = "IN"; }
+            else if (tx.from === myID || tx.sender === myID) { isMine = true; flow = "OUT"; }
 
-                if(isMine) {
-                    let txId = tx.tx_id || key; 
-                    if(!seenTxIds.has(txId)) {
-                        cloudHistory.push({
-                            flow: flow,
-                            t: flow === "IN" ? "MASUK (SYNC)" : "KELUAR (SYNC)",
-                            label: (Math.abs(tx.val)/MG_PER_DIRHAM).toFixed(2) + " Dr",
-                            val: Math.abs(tx.val),
-                            time: new Date(tx.timestamp || tx.time).toLocaleTimeString(),
-                            raw: key,
-                            txId: txId
-                        });
-                        seenTxIds.add(txId);
-                    }
+            if(isMine) {
+                let txId = tx.tx_id || key; 
+                if(!seenTxIds.has(txId)) {
+                    cloudHistory.push({
+                        flow: flow,
+                        t: flow === "IN" ? "MASUK (SYNC)" : "KELUAR (SYNC)",
+                        label: (Number(tx.val)/MG_PER_DIRHAM).toFixed(2) + " Dr",
+                        val: Number(tx.val), // Pastikan Number
+                        time: new Date(tx.timestamp || tx.time).toLocaleTimeString(),
+                        raw: key,
+                        txId: txId
+                    });
+                    seenTxIds.add(txId);
                 }
             }
         }
 
+        // Gabungkan data: Pertahankan data lokal yang BELUM ada di cloud (Pending)
         let pendingLocal = history.filter(h => !seenTxIds.has(h.raw) && !seenTxIds.has(h.txId));
+        
+        // Update history utama
         history = [...pendingLocal, ...cloudHistory.reverse()];
         
         recalcBalance();
@@ -316,19 +328,34 @@ async function fullRecovery() {
         updateUI();
 
     } catch(e) {
-        statusEl.innerHTML = "❌ Gagal Sync (Offline)";
-        statusEl.style.color = "#e74c3c";
+        console.error(e);
+        statusEl.innerHTML = "⚠️ Offline Mode";
+        statusEl.style.color = "#888";
     }
 }
 
+// --- PERBAIKAN MATEMATIKA SALDO ---
 function recalcBalance() {
-    let calc = 0;
+    let calc = 0; // Mulai dari integer murni
+    
+    // Filter history sampah (yang valuenya null/undefined)
+    history = history.filter(h => h && h.val != null);
+
     history.forEach(h => {
-        let v = parseInt(h.val) || 0;
-        if(h.flow === 'IN') calc += v;
-        else if(h.flow === 'OUT') calc -= v;
+        // Pakai Number() untuk memaksa jadi angka, bukan string
+        let v = Number(h.val); 
+        if (isNaN(v)) v = 0;
+
+        if(h.flow === 'IN') {
+            calc += v;
+        } else if(h.flow === 'OUT') {
+            calc -= v;
+        }
     });
+
+    // Cegah saldo negatif
     if(calc < 0) calc = 0;
+    
     totalMg = calc;
     localStorage.setItem('nw_mg', totalMg);
     localStorage.setItem('nw_hist', JSON.stringify(history));
@@ -354,15 +381,29 @@ async function executeTransfer() {
         const signature = createSig(tokenContent, savedKey);
         const token = "TOKEN-" + btoa(tokenContent + "|" + signature);
 
+        // 1. Kirim ke Inbox Penerima
         await fetch(`${DB_URL}inbox/${dest}.json`, { method: 'POST', body: JSON.stringify(token) });
         
+        // 2. Catat di Ledger Publik
         await fetch(`${DB_URL}public_ledger/${nonce}.json`, { 
             method: 'PUT', 
             body: JSON.stringify({ type: 'P2P', from: myID, to: dest, val: amtMg, timestamp: Date.now(), tx_id: nonce }) 
         });
 
-        history.unshift({ flow: 'OUT', t: 'KELUAR', label: amtDr.toFixed(2) + " Dr > " + dest, val: amtMg, raw: token, txId: nonce, time: new Date().toLocaleTimeString() });
-        recalcBalance(); updateUI();
+        // 3. Update Lokal Langsung (Supaya kerasa cepet)
+        history.unshift({ 
+            flow: 'OUT', 
+            t: 'KELUAR', 
+            label: amtDr.toFixed(2) + " Dr > " + dest, 
+            val: amtMg, 
+            raw: token, 
+            txId: nonce, 
+            time: new Date().toLocaleTimeString() 
+        });
+        
+        recalcBalance(); 
+        updateUI();
+        
         alert("✅ TRANSFER SUKSES!");
         document.getElementById('transferModal').style.display = 'none';
         document.getElementById('trfPin').value = "";
@@ -377,8 +418,10 @@ async function quickSend(mg, label) {
     const nonce = "W-" + Math.random().toString(36).substring(2, 7).toUpperCase();
     const token = "TOKEN-" + btoa(`${mg}:${Date.now()}:${nonce}` + "|" + createSig(`${mg}:${Date.now()}:${nonce}`, savedKey));
     
+    // Kirim ke cloud background
     fetch(`${DB_URL}public_ledger/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ type: 'CASH_OUT', from: myID, val: mg, timestamp: Date.now(), tx_id: nonce }) });
     
+    // Update lokal
     history.unshift({ flow: 'OUT', t: 'KELUAR', label: label, val: mg, raw: token, txId: nonce, time: new Date().toLocaleTimeString() });
     recalcBalance(); updateUI();
     
@@ -388,24 +431,41 @@ async function quickSend(mg, label) {
     document.getElementById('textToken').innerText = token;
 }
 
-// --- CLAIM ---
+// --- CLAIM & INBOX ---
 async function execClaim() {
     let input = document.getElementById('tokenIn').value.replace("TOKEN-", "").trim();
     if(!input) return;
     try {
-        let [payload] = atob(input).split("|");
+        let decoded = atob(input);
+        let [payload] = decoded.split("|");
         let parts = payload.split(":");
-        let mg = parseInt(parts[0]);
+        
+        // Validasi format token
+        if(parts.length < 3) throw "Format Token Invalid";
+
+        let mg = Number(parts[0]); // Pastikan Number
         let nonce = parts[2];
 
+        // Cek double claim ke Cloud
         const check = await fetch(`${DB_URL}used_tokens/${nonce}.json`);
         const cloudData = await check.json();
         if(cloudData && cloudData.claimed) throw "Token Sudah Dipakai!";
         
+        // Mark as used
         await fetch(`${DB_URL}used_tokens/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ claimed: true, by: myID, at: new Date().toISOString() }) });
         
-        history.unshift({ flow: 'IN', t: 'MASUK (SCAN)', label: (mg/MG_PER_DIRHAM).toFixed(2) + " Dr", val: mg, raw: input, txId: nonce, time: new Date().toLocaleTimeString() });
-        recalcBalance(); updateUI(); 
+        history.unshift({ 
+            flow: 'IN', 
+            t: 'MASUK (SCAN)', 
+            label: (mg/MG_PER_DIRHAM).toFixed(2) + " Dr", 
+            val: mg, 
+            raw: input, 
+            txId: nonce, 
+            time: new Date().toLocaleTimeString() 
+        });
+        
+        recalcBalance(); 
+        updateUI(); 
         alert("✅ DANA DITERIMA!");
         document.getElementById('manualClaim').style.display = 'none'; 
         document.getElementById('tokenIn').value = "";
@@ -422,35 +482,56 @@ async function checkInbox() {
             for (let k in data) {
                 try {
                     let tokenStr = data[k];
-                    let [payload] = atob(tokenStr.replace("TOKEN-", "")).split("|");
+                    let decoded = atob(tokenStr.replace("TOKEN-", ""));
+                    let [payload] = decoded.split("|");
                     let parts = payload.split(":");
-                    let mg = parseInt(parts[0]);
+                    let mg = Number(parts[0]);
                     let nonce = parts[2];
                     
+                    // Cek used
                     let check = await fetch(`${DB_URL}used_tokens/${nonce}.json`);
                     let cd = await check.json();
+                    
                     if(!cd) {
-                        await fetch(`${DB_URL}used_tokens/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ claimed: true, by: myID }) });
-                        history.unshift({ flow: 'IN', t: 'MASUK (INBOX)', label: (mg/MG_PER_DIRHAM).toFixed(2) + " Dr", val: mg, raw: tokenStr, txId: nonce, time: new Date().toLocaleTimeString() });
+                        // Claim otomatis
+                        await fetch(`${DB_URL}used_tokens/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ claimed: true, by: myID, via: 'INBOX' }) });
+                        
+                        history.unshift({ 
+                            flow: 'IN', 
+                            t: 'MASUK (INBOX)', 
+                            label: (mg/MG_PER_DIRHAM).toFixed(2) + " Dr", 
+                            val: mg, 
+                            raw: tokenStr, 
+                            txId: nonce, 
+                            time: new Date().toLocaleTimeString() 
+                        });
                         count++;
                     }
+                    // Hapus dari inbox setelah diproses
                     await fetch(`${DB_URL}inbox/${myID}/${k}.json`, { method: 'DELETE' });
-                } catch(e) {}
+                } catch(e) { console.log("Skip bad token"); }
             }
-            if(count > 0){ recalcBalance(); updateUI(); alert(`📬 ${count} Transfer Masuk!`); }
+            if(count > 0){ 
+                recalcBalance(); 
+                updateUI(); 
+                alert(`📬 ${count} Transfer Masuk!`); 
+            }
         }
     } catch(e){}
 }
 
-// --- UTILS ---
+// --- UTILS & UI ---
 function updateUI() { 
     if(isNaN(totalMg)) recalcBalance(); 
     document.getElementById('myIDDisplay').innerText = myID; 
+    
     let td = totalMg / MG_PER_DIRHAM; 
     document.getElementById('valDinar').innerText = Math.floor(td / 27); 
     document.getElementById('valDirham').innerText = (td % 27).toFixed(2); 
+    
     document.getElementById('silverGram').innerText = (totalMg / 1000).toFixed(3) + "g"; 
     document.getElementById('goldGram').innerText = (td * (4.25/27)).toFixed(3) + "g"; 
+    
     renderLog(); 
 }
 
@@ -469,7 +550,7 @@ function renderLog() {
 
 function openTransfer() { document.getElementById('transferModal').style.display = 'flex'; }
 function showMyID() { document.getElementById('myIdModal').style.display = 'flex'; document.getElementById('textMyId').innerText = myID; document.getElementById('qrMyId').innerHTML = ""; new QRCode(document.getElementById("qrMyId"), { text: "ID:" + myID, width: 200, height: 200 }); }
-async function forceReport() { let btn = document.querySelector('.btn-report'); btn.innerText = "..."; try { await fetch(`${DB_URL}census_report/${myID}.json`, { method: 'PUT', body: JSON.stringify({ name: myID, balance_mg: totalMg, last: Date.now() }) }); alert("Sensus OK"); checkInbox(); } catch(e){} btn.innerText = "📡 LAPOR"; }
+async function forceReport() { let btn = document.querySelector('.btn-report'); btn.innerText = "..."; try { await fetch(`${DB_URL}census_report/${myID}.json`, { method: 'PUT', body: JSON.stringify({ name: myID, balance_mg: totalMg, last: Date.now() }) }); alert("Laporan Sensus Terkirim"); checkInbox(); } catch(e){} btn.innerText = "📡 LAPOR"; }
 function startSetupScan() { document.getElementById('setupReaderWrapper').style.display = 'block'; setupQrCode = new Html5Qrcode("setupReader"); setupQrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (txt) => { document.getElementById('loginKey').value = txt; stopSetupScan(); }, () => {}); }
 function stopSetupScan() { if(setupQrCode) setupQrCode.stop().then(() => { document.getElementById('setupReaderWrapper').style.display = 'none'; }); }
 function startScanner() { document.getElementById('scanner-wrapper').style.display = 'block'; html5QrCode = new Html5Qrcode("reader"); html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (txt) => { stopScanner(); if(txt.startsWith("ID:")) { openTransfer(); document.getElementById('trfDest').value = txt.split(":")[1]; } else { document.getElementById('tokenIn').value = txt; execClaim(); } }, () => {}); }
@@ -481,7 +562,13 @@ function copy(el) { navigator.clipboard.writeText(el.innerText); alert("Token Di
 function clearHistory() { if(confirm("Hapus cache lokal? Data akan ditarik ulang dari Cloud.")) { history = []; recalcBalance(); fullRecovery(); } }
 function logout() { location.reload(); }
 
-setInterval(() => { fullRecovery(); checkInbox(); }, 90000);
+// INITIAL LOAD ONLY
+window.onload = function() {
+    if(savedKey) {
+       recalcBalance();
+       updateUI();
+    }
+}
 </script>
 </body>
 </html>
