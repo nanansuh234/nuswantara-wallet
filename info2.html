@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dokumentasi Ekosistem Nuswantara</title>
+    <style>
+        :root {
+            --gold: #d4af37;
+            --silver: #bdc3c7;
+            --bg: #050505;
+            --card-bg: #111;
+            --text: #e0e0e0;
+            --accent: #2ecc71;
+        }
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        h1, h2, h3 {
+            color: var(--gold);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        h1 {
+            border-bottom: 2px solid var(--gold);
+            padding-bottom: 15px;
+            margin-bottom: 40px;
+            text-align: center;
+        }
+        .section {
+            background: var(--card-bg);
+            border: 1px solid #222;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        .badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .b-gold { background: rgba(212, 175, 55, 0.2); color: var(--gold); border: 1px solid var(--gold); }
+        .b-blue { background: rgba(52, 152, 219, 0.2); color: #3498db; border: 1px solid #3498db; }
+        .b-green { background: rgba(46, 204, 113, 0.2); color: var(--accent); border: 1px solid var(--accent); }
+
+        ul { list-style: none; padding: 0; }
+        li {
+            margin-bottom: 10px;
+            padding-left: 20px;
+            position: relative;
+        }
+        li::before {
+            content: "➤";
+            color: var(--gold);
+            position: absolute;
+            left: 0;
+            font-size: 0.8rem;
+        }
+        a { color: #3498db; text-decoration: none; font-weight: bold; }
+        a:hover { text-decoration: underline; }
+
+        .concept-box {
+            border-left: 4px solid var(--gold);
+            padding-left: 20px;
+            margin-top: 20px;
+            background: rgba(20, 20, 20, 0.5);
+            padding: 15px;
+        }
+        .highlight { color: #fff; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <h1>Ekosistem Ekonomi Nuswantara</h1>
+
+    <div class="section">
+        <h2>🏛️ Filosofi: System Stability Settlement</h2>
+        <p>
+            Nuswantara Wallet bukan sekadar dompet digital biasa. Ini adalah implementasi dari 
+            <strong>Stable Coin berbasis Aset Riil & Kepercayaan Kolektif</strong>.
+        </p>
+        
+        <div class="concept-box">
+            <h3>Mengapa Sistem Ini Berbeda?</h3>
+            <p>
+                Dalam sistem ekonomi konvensional (Fiat), nilai uang seringkali hanya didasarkan pada "janji bayar" (utang) atau kinerja perputaran uang semata. Jika perputaran macet, ekonomi <em>burnout</em> (kelelahan) dan inflasi terjadi karena tidak ada jaminan fisik.
+            </p>
+            <p>
+                <strong>Di Nuswantara:</strong>
+                Saldo Dinar/Dirham yang Anda pegang adalah <span class="highlight">Unit Akuntansi Nilai (Standard of Value)</span>. 
+            </p>
+            <p>
+                <em>Contoh Kasus:</em><br>
+                Saat Anda menukar <strong>Beras</strong> dengan Token, Anda mendapatkan saldo senilai Dinar/Dirham. Token tersebut kemudian Anda pakai untuk membeli <strong>Ikan</strong>. 
+                Nilai token tersebut <strong>ADA</strong> dan <strong>STABIL</strong> bukan karena angka di layar, tapi karena ada jaminan aset (Beras & Ikan) yang berputar di komunitas warga secara kolektif.
+            </p>
+            <p>
+                Emas (Dinar) dan Perak (Dirham) digunakan sebagai <strong>Takaran Nilai (Benchmark)</strong> yang anti-inflasi, meskipun transaksinya menggunakan komoditas sehari-hari. Backing jaminan dipegang oleh warga secara terdesentralisasi (Community Collateral).
+            </p>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>1. Indikator Moneter (Komando Pusat)</h2>
+        <div style="margin-bottom: 10px;">
+            <span class="badge b-gold">Audit</span>
+            <span class="badge b-gold">Sensus</span>
+            <span class="badge b-gold">Whales Tracking</span>
+        </div>
+        <p>Halaman ini berfungsi sebagai "Dashboard Tuhan" atau alat audit utama bagi regulator sistem/Bank Sentral Komunitas.</p>
+        
+        <h3>Fungsi Utama:</h3>
+        <ul>
+            <li><strong>Total Supply Audit:</strong> Menggabungkan data dari seluruh wallet warga + cadangan bank + uang fisik yang beredar (QR Token).</li>
+            <li><strong>Top Holders (Whales):</strong> Melacak siapa pemegang saldo terbesar untuk mencegah monopoli atau penimbunan yang tidak sehat.</li>
+            <li><strong>Cross-Check Data:</strong> Memastikan tidak ada uang yang tercetak secara ilegal ("Double Spending") dengan membandingkan data Sensus dan Buku Besar (Ledger).</li>
+        </ul>
+        <p>🔗 Akses: <a href="https://nanansuh234.github.io/nuswantara-wallet/moneterindikator.html" target="_blank">moneterindikator.html</a></p>
+    </div>
+
+    <div class="section">
+        <h2>2. Balance Sheet / Monitor Ekonomi</h2>
+        <div style="margin-bottom: 10px;">
+            <span class="badge b-blue">Transparansi Publik</span>
+            <span class="badge b-blue">Velocity</span>
+            <span class="badge b-blue">Nusa Time</span>
+        </div>
+        <p>Halaman ini adalah "Papan Pengumuman Digital" yang transparan bagi seluruh warga untuk melihat kesehatan ekonomi komunitas secara real-time.</p>
+
+        <h3>Fungsi Utama:</h3>
+        <ul>
+            <li><strong>Live Ledger:</strong> Menampilkan setiap transaksi yang terjadi (Cetak, Transfer, Klaim) detik demi detik.</li>
+            <li><strong>Velocity of Money:</strong> Mengukur seberapa cepat uang berpindah tangan. Semakin tinggi velocity, semakin sehat ekonomi warga (tidak ada penimbunan).</li>
+            <li><strong>Indikator Kesehatan:</strong> Menghitung rasio antara supply uang dan aktivitas transaksi.</li>
+            <li><strong>Waktu Nuswantara:</strong> Menggunakan sistem penanggalan lokal (Pasaran, Wuku, Jam Etos Kerja) untuk menyelaraskan ritme ekonomi dengan ritme alam.</li>
+        </ul>
+        <p>🔗 Akses: <a href="https://nanansuh234.github.io/nuswantara-wallet/balancesheet.html" target="_blank">balancesheet.html</a></p>
+    </div>
+
+    <div class="section">
+        <h2>3. Nuswantara Wallet (Aplikasi Pengguna)</h2>
+        <div style="margin-bottom: 10px;">
+            <span class="badge b-green">P2P</span>
+            <span class="badge b-green">Offline-First</span>
+            <span class="badge b-green">Self-Custody</span>
+        </div>
+        <p>Aplikasi antarmuka utama yang digunakan warga untuk berinteraksi dengan ekonomi sistem.</p>
+
+        <h3>Fitur & Kemampuan:</h3>
+        <ul>
+            <li><strong>Kunci Pribadi (Private Key):</strong> Keamanan penuh di tangan pengguna. Tidak ada pihak bank yang bisa membekukan akun Anda selama Anda memegang kuncinya.</li>
+            <li><strong>Transfer P2P:</strong> Kirim nilai (Dinar/Dirham) antar warga tanpa perantara server pusat (selama data tersinkronisasi).</li>
+            <li><strong>Cetak Token (Cash Out):</strong> Mengubah saldo digital menjadi QR Code fisik yang bisa diprint (menjadi uang kertas/koin sementara) untuk transaksi offline.</li>
+            <li><strong>Scan & Claim:</strong> Menerima pembayaran atau mencairkan token fisik kembali menjadi saldo digital.</li>
+            <li><strong>Offline-Ready:</strong> Saldo tersimpan di perangkat (Local Storage) sehingga aman dari gangguan koneksi sesaat. Sistem akan melakukan sinkronisasi otomatis (Smart Sync) saat terhubung kembali.</li>
+        </ul>
+        <p>🔗 Akses: <a href="https://nanansuh234.github.io/nuswantara-wallet/" target="_blank">Halaman Utama Wallet</a></p>
+    </div>
+
+    <div style="text-align:center; margin-top:50px; color:#555; font-size:0.8rem;">
+        &copy; 2025 Nuswantara Ecosystem - Decentralized Community Economy
+    </div>
+
+</div>
+
+</body>
+</html>
