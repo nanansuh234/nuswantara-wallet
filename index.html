@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nuswantara Wallet v22.5 (Offline First)</title>
+    <title>Nuswantara Wallet v22.6 (Re-Claim Fix)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
@@ -57,7 +57,7 @@
     <div id="walletPanel" style="display:none;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
             <div style="text-align:left;">
-                <span style="font-size: 0.65rem; color: #f39c12; letter-spacing: 1px; font-weight: bold;">NUSWANTARA v22.5</span><br>
+                <span style="font-size: 0.65rem; color: #f39c12; letter-spacing: 1px; font-weight: bold;">NUSWANTARA v22.6</span><br>
                 <div style="display:flex; align-items:center;">
                     <div id="myIDDisplay" class="id-badge">ID: ...</div>
                     <button onclick="forceReport()" class="btn-report">📡 LAPOR</button>
@@ -194,7 +194,7 @@ let savedTxPin = localStorage.getItem('nw_tx_pin') || "";
 let totalMg = 0; 
 let history = [];
 
-// 1. LOAD LOCAL STORAGE DULUAN (PRIORITAS UTAMA)
+// 1. LOAD LOCAL STORAGE
 try {
     let rawHist = localStorage.getItem('nw_hist');
     history = rawHist ? JSON.parse(rawHist) : [];
@@ -211,10 +211,8 @@ if (savedKey && !myID) {
     localStorage.setItem('nw_name', myID);
 }
 
-// Hitung saldo langsung saat script dimuat
 recalcBalance();
 
-// Tentukan Tampilan Login atau App
 if(savedKey === "") {
     document.getElementById('lockScreen').style.display = "block";
     document.getElementById('lockTitle').innerText = "SETUP WALLET BARU";
@@ -227,40 +225,27 @@ if(savedKey === "") {
     document.getElementById('lockTitle').innerText = "LOGIN WALLET";
 }
 
-// --- LOGIC SALDO ANTI-RESET ---
+// --- LOGIC SALDO ---
 function recalcBalance() {
     let calc = 0;
-    
-    // Bersihkan data yang corrupt/null
     if(!Array.isArray(history)) history = [];
     history = history.filter(h => h && h.val !== undefined && h.val !== null);
 
     history.forEach(h => {
-        // Paksa semua nilai jadi Number agar tidak dibaca sebagai teks
         let val = Number(h.val);
         if (isNaN(val)) val = 0;
-
-        if(h.flow === 'IN') {
-            calc += val;
-        } else if(h.flow === 'OUT') {
-            calc -= val;
-        }
+        if(h.flow === 'IN') calc += val;
+        else if(h.flow === 'OUT') calc -= val;
     });
 
     if(calc < 0) calc = 0;
     totalMg = calc;
-    
-    // Simpan hitungan terbaru ke Local
     localStorage.setItem('nw_mg', totalMg);
     localStorage.setItem('nw_hist', JSON.stringify(history));
-    
-    // Update Tampilan
     updateUI();
 }
 
-// --- SMART SYNC (MERGE ONLY) ---
-// Logic: Ambil data cloud, kalau ada transaksi baru, tambahkan ke lokal. 
-// Kalau cloud error/kosong, biarkan lokal apa adanya.
+// --- SMART SYNC ---
 async function fullRecovery() {
     if(!myID) return;
     let statusEl = document.getElementById('syncStatus');
@@ -268,34 +253,28 @@ async function fullRecovery() {
     statusEl.style.color = "#f39c12";
 
     try {
-        checkInbox(); // Cek inbox dulu
+        checkInbox(); 
 
         let res = await fetch(`${DB_URL}public_ledger.json`);
-        
-        // Kalau fetch gagal (offline), dia akan lempar error ke catch(). Data aman.
         let ledger = await res.json();
         
-        // Kalau database kosong, jangan hapus data lokal!
         if (!ledger) {
-            statusEl.innerHTML = "⚠️ Cloud Kosong (Lokal Aktif)";
+            statusEl.innerHTML = "⚠️ Cloud Kosong";
             statusEl.style.color = "#888";
             return; 
         }
 
         let incomingHistory = [];
-        let existingIds = new Set(history.map(h => h.txId)); // Catat ID yang udah ada di lokal
+        let existingIds = new Set(history.map(h => h.txId));
 
         for (let key in ledger) {
             let tx = ledger[key];
             let isMine = false, flow = "";
-            
             if (tx.to === myID) { isMine = true; flow = "IN"; }
             else if (tx.from === myID || tx.sender === myID) { isMine = true; flow = "OUT"; }
 
             if(isMine) {
                 let txId = tx.tx_id || key;
-                
-                // HANYA TAMBAHKAN JIKA DI LOKAL BELUM ADA
                 if(!existingIds.has(txId)) {
                     incomingHistory.push({
                         flow: flow,
@@ -311,7 +290,6 @@ async function fullRecovery() {
             }
         }
 
-        // Gabungkan: Data Baru + Data Lama
         if (incomingHistory.length > 0) {
             history = [...incomingHistory.reverse(), ...history];
             recalcBalance(); 
@@ -325,13 +303,12 @@ async function fullRecovery() {
 
     } catch(e) {
         console.log("Offline mode:", e);
-        statusEl.innerHTML = "⚠️ Mode Offline (Aman)";
+        statusEl.innerHTML = "⚠️ Mode Offline";
         statusEl.style.color = "#e74c3c";
-        // GAK ADA CODE YANG MENGHAPUS HISTORY DISINI. AMAN.
     }
 }
 
-// --- FUNGSI LAINNYA ---
+// --- FUNGSI SECURITY & LOGIN ---
 function validatePassword(pass) {
     const strongRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{6,}$/;
     return strongRegex.test(pass);
@@ -359,8 +336,6 @@ function unlockWallet() {
             document.getElementById('lockScreen').style.display = "none";
             document.getElementById('walletPanel').style.display = "block";
             if(!savedTxPin) document.getElementById('setupPinModal').style.display = 'flex';
-            
-            // Coba sync, tapi kalau gagal tetep load data lokal
             fullRecovery();
         } else {
             msg.innerText = "PASSWORD SALAH!";
@@ -403,7 +378,6 @@ async function executeTransfer() {
             body: JSON.stringify({ type: 'P2P', from: myID, to: dest, val: amtMg, timestamp: Date.now(), tx_id: nonce }) 
         });
 
-        // Update Lokal Duluan (Biar kerasa cepet)
         history.unshift({ 
             flow: 'OUT', 
             t: 'KELUAR', 
@@ -429,6 +403,7 @@ async function quickSend(mg, label) {
     const nonce = "W-" + Math.random().toString(36).substring(2, 7).toUpperCase();
     const token = "TOKEN-" + btoa(`${mg}:${Date.now()}:${nonce}` + "|" + createSig(`${mg}:${Date.now()}:${nonce}`, savedKey));
     
+    // Simpan ke Ledger juga biar aman
     fetch(`${DB_URL}public_ledger/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ type: 'CASH_OUT', from: myID, val: mg, timestamp: Date.now(), tx_id: nonce }) });
     
     history.unshift({ flow: 'OUT', t: 'KELUAR', label: label, val: mg, raw: token, txId: nonce, time: new Date().toLocaleTimeString() });
@@ -440,6 +415,7 @@ async function quickSend(mg, label) {
     document.getElementById('textToken').innerText = token;
 }
 
+// --- CLAIM DENGAN FITUR RECOVERY ---
 async function execClaim() {
     let input = document.getElementById('tokenIn').value.replace("TOKEN-", "").trim();
     if(!input) return;
@@ -452,13 +428,56 @@ async function execClaim() {
         let mg = Number(parts[0]);
         let nonce = parts[2];
 
-        // Validasi ke Cloud (Wajib Online)
+        // 1. Cek Cloud
         const check = await fetch(`${DB_URL}used_tokens/${nonce}.json`);
         const cloudData = await check.json();
-        if(cloudData && cloudData.claimed) throw "Token Sudah Dipakai!";
         
+        // 2. LOGIKA RECOVERY PENTING DISINI
+        if(cloudData && cloudData.claimed) {
+            if(cloudData.by === myID) {
+                // JIKA TOKEN SUDAH DIPAKAI OLEH SAYA SENDIRI -> PULIHKAN SALDO
+                // Cek dulu apakah sudah ada di history lokal biar gak double
+                let exists = history.some(h => h.txId === nonce);
+                if(!exists) {
+                    history.unshift({ 
+                        flow: 'IN', 
+                        t: 'MASUK (RECOVERY)', 
+                        label: (mg/MG_PER_DIRHAM).toFixed(2) + " Dr", 
+                        val: mg, 
+                        raw: input, 
+                        txId: nonce, 
+                        time: new Date().toLocaleTimeString() 
+                    });
+                    recalcBalance();
+                    alert("♻️ TOKEN LAMA DIPULIHKAN! Saldo masuk kembali.");
+                    document.getElementById('manualClaim').style.display = 'none'; 
+                    document.getElementById('tokenIn').value = "";
+                    return; // STOP DISINI
+                } else {
+                    throw "Token ini sudah ada di riwayat Anda.";
+                }
+            } else {
+                throw "Token sudah dipakai orang lain!";
+            }
+        }
+        
+        // 3. PROSES CLAIM BARU
+        // Tandai sebagai Used
         await fetch(`${DB_URL}used_tokens/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ claimed: true, by: myID, at: new Date().toISOString() }) });
         
+        // --- FIX PENTING: TULIS KE PUBLIC LEDGER ---
+        // Biar kalau reset lagi, data tetap aman di cloud
+        await fetch(`${DB_URL}public_ledger/${nonce}.json`, { 
+            method: 'PUT', 
+            body: JSON.stringify({ 
+                type: 'CLAIM_QR', 
+                to: myID, 
+                val: mg, 
+                timestamp: Date.now(), 
+                tx_id: nonce 
+            }) 
+        });
+
         history.unshift({ 
             flow: 'IN', 
             t: 'MASUK (SCAN)', 
@@ -497,6 +516,13 @@ async function checkInbox() {
                     
                     if(!cd) {
                         await fetch(`${DB_URL}used_tokens/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ claimed: true, by: myID, via: 'INBOX' }) });
+                        
+                        // CATAT INBOX KE LEDGER JUGA
+                        await fetch(`${DB_URL}public_ledger/${nonce}.json`, { 
+                            method: 'PUT', 
+                            body: JSON.stringify({ type: 'INBOX_CLAIM', to: myID, val: mg, timestamp: Date.now(), tx_id: nonce }) 
+                        });
+
                         history.unshift({ 
                             flow: 'IN', 
                             t: 'MASUK (INBOX)', 
@@ -532,9 +558,10 @@ function renderLog() {
     document.getElementById('historyLog').innerHTML = validLogs.slice(0, 30).map(h => {
         let color = h.flow === 'IN' ? '#2ecc71' : '#e74c3c';
         let arrow = h.flow === 'IN' ? '⬇️' : '⬆️';
+        let timeStr = h.time ? h.time : "Recently";
         return `
         <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #222; align-items:center;">
-            <div><span style="color:${color}; font-weight:bold; font-size:0.75rem;">${arrow} ${h.label}</span><br><small style="color:#555;">${h.time}</small></div>
+            <div><span style="color:${color}; font-weight:bold; font-size:0.75rem;">${arrow} ${h.label}</span><br><small style="color:#555;">${timeStr}</small></div>
             <span style="font-size:0.5rem; color:#444;">${h.t}</span>
         </div>`
     }).join('');
@@ -556,7 +583,7 @@ function logout() { location.reload(); }
 
 window.onload = function() {
     if(savedKey) {
-       recalcBalance(); // Pastikan hitung ulang saat load
+       recalcBalance();
        updateUI();
     }
 }
