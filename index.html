@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nuswantara Wallet v22.0 (Secure Core)</title>
+    <title>Nuswantara Wallet v22.1 (Fix Patch)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
@@ -30,7 +30,7 @@
     <div id="lockScreen" style="display:none; text-align: center; padding: 20px;">
         <div style="font-size: 3.5rem; margin-bottom: 10px;">🛡️</div>
         <h3 id="lockTitle" style="color:#f39c12; margin-bottom: 10px; letter-spacing: 2px;">SECURE LOGIN</h3>
-        <p style="font-size:0.7rem; color:#777; margin-bottom:20px;">Gunakan Password Kombinasi (Min 6 Karakter, Huruf+Angka+Simbol)</p>
+        <p style="font-size:0.7rem; color:#777; margin-bottom:20px;">Gunakan Password Kombinasi (Min 6 Karakter)</p>
 
         <div id="setupReaderWrapper" style="display:none; margin-bottom: 15px; position:relative;">
             <div id="setupReader" style="width:100%; border-radius:15px; overflow:hidden; border:2px solid #3498db;"></div>
@@ -45,7 +45,7 @@
         
         <input type="password" id="loginKey" placeholder="Paste Private Key..." style="width:100%; padding:15px; margin-bottom:12px; background:#111; border:1px solid #333; color:#fff; border-radius:12px; text-align:center; font-size: 0.8rem; box-sizing: border-box; font-family:monospace;">
         
-        <input type="password" id="loginPass" placeholder="Password (Huruf+Angka+Unik)" style="width:100%; padding:15px; margin-bottom:20px; background:#111; border:1px solid #333; color:#fff; border-radius:12px; text-align:center; font-size: 1rem; box-sizing: border-box;">
+        <input type="password" id="loginPass" placeholder="Password Login" style="width:100%; padding:15px; margin-bottom:20px; background:#111; border:1px solid #333; color:#fff; border-radius:12px; text-align:center; font-size: 1rem; box-sizing: border-box;">
         
         <button onclick="unlockWallet()" class="btn-action" style="width:100%; padding:15px; background:#f39c12; color:#000; border:none; border-radius:12px; font-weight:bold; font-size: 1rem;">BUKA WALLET</button>
         <div id="loginMsg" style="color:#e74c3c; font-size:0.7rem; margin-top:10px;"></div>
@@ -54,7 +54,7 @@
     <div id="walletPanel" style="display:none;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
             <div style="text-align:left;">
-                <span style="font-size: 0.65rem; color: #f39c12; letter-spacing: 1px; font-weight: bold;">NUSWANTARA v22.0</span><br>
+                <span style="font-size: 0.65rem; color: #f39c12; letter-spacing: 1px; font-weight: bold;">NUSWANTARA v22.1</span><br>
                 <div style="display:flex; align-items:center;">
                     <div id="myIDDisplay" class="id-badge">ID: ...</div>
                     <button onclick="forceReport()" class="btn-report">📡 LAPOR</button>
@@ -174,10 +174,16 @@ const MG_PER_DINAR = 80460;
 
 // --- STATE MANAGER ---
 let savedKey = localStorage.getItem('nw_key') || "";
-let savedPass = localStorage.getItem('nw_pass') || ""; // Password Login
-let savedTxPin = localStorage.getItem('nw_tx_pin') || ""; // PIN Transaksi 6 Angka
+let savedPass = localStorage.getItem('nw_pass') || "";
+let savedTxPin = localStorage.getItem('nw_tx_pin') || "";
 let totalMg = parseInt(localStorage.getItem('nw_mg')); 
-let history = JSON.parse(localStorage.getItem('nw_hist')) || [];
+// SAFETY CHECK: Ensure history is array
+let history = [];
+try {
+    history = JSON.parse(localStorage.getItem('nw_hist')) || [];
+    if(!Array.isArray(history)) history = [];
+} catch(e) { history = []; }
+
 let myID = localStorage.getItem('nw_name');
 let html5QrCode, setupQrCode;
 
@@ -188,24 +194,22 @@ if (savedKey && !myID) {
     localStorage.setItem('nw_name', myID);
 }
 
-// Check Balance Integrity on Load
+// FIX: Recalculate correctly on load
 updateBalanceFromHistory(); 
 
 if(savedKey === "") {
-    // Mode Setup Baru
     document.getElementById('lockScreen').style.display = "block";
     document.getElementById('lockTitle').innerText = "SETUP WALLET BARU";
-    document.getElementById('loginPass').placeholder = "Buat Password Kuat...";
+    document.getElementById('loginPass').placeholder = "Buat Password (Huruf+Angka+Simbol)";
 } else {
-    // Mode Login
     document.getElementById('lockScreen').style.display = "block";
-    document.getElementById('loginKey').style.display = "none"; // Hide key input, just pass
+    document.getElementById('loginKey').style.display = "none"; 
     document.querySelector('.btn-scan-key').style.display = "none";
     document.querySelector('.file-btn').style.display = "none";
     document.getElementById('lockTitle').innerText = "LOGIN WALLET";
 }
 
-// --- FUNGSI UTAMA BARU (SECURITY & LOGIC) ---
+// --- FUNGSI UTAMA BARU (SECURITY & LOGIC FIX) ---
 
 function validatePassword(pass) {
     // Regex: Min 6 chars, at least 1 letter, 1 number, 1 special char
@@ -221,7 +225,6 @@ function unlockWallet() {
     let msg = document.getElementById('loginMsg');
 
     if(savedKey === "") {
-        // --- SETUP MODE ---
         if(k.length < 10) { msg.innerText = "Private Key terlalu pendek!"; return; }
         if(!validatePassword(p)) { 
             msg.innerText = "Password Lemah! Harus min 6 karakter, ada huruf, angka, dan simbol unik."; 
@@ -232,15 +235,10 @@ function unlockWallet() {
         alert("Wallet Dibuat! Silakan atur PIN Transaksi selanjutnya.");
         location.reload();
     } else {
-        // --- LOGIN MODE ---
         if(p === savedPass) {
             document.getElementById('lockScreen').style.display = "none";
             document.getElementById('walletPanel').style.display = "block";
-            
-            // Cek apakah user sudah punya PIN Transaksi (Upgrade compatibility)
-            if(!savedTxPin) {
-                document.getElementById('setupPinModal').style.display = 'flex';
-            }
+            if(!savedTxPin) document.getElementById('setupPinModal').style.display = 'flex';
             updateUI();
         } else {
             msg.innerText = "PASSWORD SALAH!";
@@ -261,30 +259,35 @@ function saveTxPin() {
     alert("PIN Transaksi Tersimpan! Gunakan ini untuk transfer.");
 }
 
-// --- FUNGSI BALANCE & HISTORY FIX (CORE LOGIC) ---
-// Mengganti tebak-tebakan string dengan kalkulasi pasti berdasarkan flow 'IN'/'OUT'
+// --- CORE FIX: LOGIC SALDO ANTI-REPLACE ---
 function updateBalanceFromHistory() {
     let calcMg = 0;
-    // Bersihkan history yang rusak (tidak ada val)
-    history = history.filter(h => h.val && !isNaN(h.val));
+    // Bersihkan history yang korup (null/NaN)
+    const validHistory = history.filter(h => h && h.val && !isNaN(h.val));
     
-    // Recalculate from scratch
-    history.slice().reverse().forEach(h => {
+    // Hitung ulang dari awal (Replay Transaction)
+    validHistory.slice().reverse().forEach(h => {
         let val = parseInt(h.val);
+        
+        // LOGIC FIX: Check Flow explisit
         if(h.flow === 'IN') {
             calcMg += val;
         } else if (h.flow === 'OUT') {
             calcMg -= val;
         } else {
-            // Legacy support (tebak dari label lama jika flow undefined)
-            if(h.t && h.t.includes('MASUK')) calcMg += val;
-            if(h.t && h.t.includes('KELUAR')) calcMg -= val;
+            // Fallback untuk history lama (sebelum v22)
+            let type = h.t || "";
+            if(type.includes('MASUK')) calcMg += val;
+            else if(type.includes('KELUAR')) calcMg -= val;
         }
     });
 
-    if(calcMg < 0) calcMg = 0; // Prevent negative logic errors
+    if(calcMg < 0) calcMg = 0;
     totalMg = calcMg;
+    
+    // Simpan history yang sudah bersih
     localStorage.setItem('nw_mg', totalMg);
+    history = validHistory; // Update memory var
     localStorage.setItem('nw_hist', JSON.stringify(history));
 }
 
@@ -297,7 +300,6 @@ async function executeTransfer() {
     if(dest === myID) return alert("Dilarang transfer ke diri sendiri.");
     if(!amtDr || amtDr <= 0) return alert("Jumlah tidak valid!");
     
-    // CHECK PIN 6 DIGIT
     if(pin !== savedTxPin) return alert("PIN TRANSAKSI SALAH!");
 
     let amtMg = Math.round(amtDr * MG_PER_DIRHAM);
@@ -312,16 +314,15 @@ async function executeTransfer() {
         await fetch(`${DB_URL}inbox/${dest}.json`, { method: 'POST', body: JSON.stringify(token) });
         await fetch(`${DB_URL}public_ledger/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ type: 'P2P', from: myID, to: dest, val: amtMg, time: Date.now() }) });
 
-        // Update Balance
         let label = amtDr.toFixed(2) + " Dr";
-        // ADD FLOW: 'OUT' agar terdeteksi balance sheet
+        // PUSH dulu ke history sebelum update balance
         history.unshift({ flow: 'OUT', t: 'KELUAR', label: label + " > " + dest, val: amtMg, raw: token, time: new Date().toLocaleTimeString() });
         
         updateBalanceFromHistory(); 
         updateUI();
         alert("✅ TRANSFER SUKSES!");
         document.getElementById('transferModal').style.display = 'none';
-        document.getElementById('trfPin').value = ""; // Clear PIN input
+        document.getElementById('trfPin').value = "";
     } catch(e) {
         alert("Error Jaringan: " + e);
     }
@@ -330,17 +331,14 @@ async function executeTransfer() {
 async function quickSend(mg, label) {
     if (mg > totalMg) return alert("SALDO TIDAK CUKUP!");
     
-    // Prompt PIN 6 Digit
     let p = prompt(`🔐 MASUKKAN PIN TRANSAKSI (6 Digit)\nUntuk membuat token senilai ${label}:`);
     if(p !== savedTxPin) return alert("PIN SALAH! Transaksi dibatalkan.");
     
     const nonce = "W-" + Math.random().toString(36).substring(2, 7).toUpperCase();
     const token = "TOKEN-" + btoa(`${mg}:${Date.now()}:${nonce}` + "|" + createSig(`${mg}:${Date.now()}:${nonce}`, savedKey));
     
-    // Log to DB
     fetch(`${DB_URL}issued_tokens/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ issuer: myID, amount: mg, created_at: Date.now() }) });
     
-    // Update Local History with FLOW: 'OUT'
     history.unshift({ flow: 'OUT', t: 'KELUAR', label: label, val: mg, raw: token, time: new Date().toLocaleTimeString() });
     
     updateBalanceFromHistory();
@@ -357,22 +355,19 @@ async function execClaim() {
     if(!input) return;
     try {
         let [payload, sig] = atob(input).split("|");
-        // Simple sig check (in real app, use verify signature against sender public key if possible, here simplified)
         let parts = payload.split(":");
         let mg = parseInt(parts[0]);
         let nonce = parts[2];
 
-        // Check Used
         const check = await fetch(`${DB_URL}used_tokens/${nonce}.json`);
         const cloudData = await check.json();
         if(cloudData && cloudData.claimed) throw "Token Sudah Dipakai!";
         
-        // Mark Used
         await fetch(`${DB_URL}used_tokens/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ claimed: true, by: myID, at: new Date().toISOString() }) });
         
         let label = (mg >= 80460) ? (mg/80460).toFixed(2)+" Dn" : (mg/2980).toFixed(2)+" Dr";
         
-        // Update History with FLOW: 'IN'
+        // PUSH ke history
         history.unshift({ flow: 'IN', t: 'MASUK', label: label, val: mg, raw: input, time: new Date().toLocaleTimeString() });
         
         updateBalanceFromHistory();
@@ -381,6 +376,31 @@ async function execClaim() {
         document.getElementById('manualClaim').style.display = 'none'; 
         document.getElementById('tokenIn').value = "";
     } catch(e) { alert("GAGAL: " + e); }
+}
+
+// FIX: NOTIFIKASI DELAY
+async function checkInbox() {
+    if(!myID) return;
+    try {
+        let res = await fetch(`${DB_URL}inbox/${myID}.json`);
+        let data = await res.json();
+        if(data) {
+            let count = 0;
+            // Proses satu per satu dengan AWAIT
+            for (let k in data) {
+                let success = await execClaimSilent(data[k]);
+                if(success) {
+                    await fetch(`${DB_URL}inbox/${myID}/${k}.json`, { method: 'DELETE' });
+                    count++;
+                }
+            }
+            if(count > 0){ 
+                updateBalanceFromHistory(); // Paksa hitung ulang
+                updateUI(); // Paksa update tampilan
+                alert(`📬 ${count} Transfer Masuk! Saldo telah diperbarui.`); 
+            }
+        }
+    } catch(e){}
 }
 
 async function execClaimSilent(tokenStr) {
@@ -394,17 +414,24 @@ async function execClaimSilent(tokenStr) {
 
         const check = await fetch(`${DB_URL}used_tokens/${nonce}.json`);
         const cloudData = await check.json();
-        if(cloudData) return; 
+        if(cloudData) return false; // Sudah diklaim
 
         await fetch(`${DB_URL}used_tokens/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ claimed: true, by: myID }) });
         
         let label = (mg/MG_PER_DIRHAM).toFixed(2) + " Dr";
         
-        // Update History with FLOW: 'IN'
-        history.unshift({ flow: 'IN', t: 'MASUK (TRF)', label: label + " fr " + sender, val: mg, raw: tokenStr, time: new Date().toLocaleTimeString() });
+        // FIX: Pastikan object history lengkap dengan flow: 'IN'
+        history.unshift({ 
+            flow: 'IN', 
+            t: 'MASUK (TRF)', 
+            label: label + " fr " + sender, 
+            val: mg, 
+            raw: tokenStr, 
+            time: new Date().toLocaleTimeString() 
+        });
         
-        updateBalanceFromHistory();
-    } catch(e) {}
+        return true;
+    } catch(e) { return false; }
 }
 
 // --- UI HELPERS ---
@@ -417,15 +444,19 @@ function updateUI() {
     document.getElementById('silverGram').innerText = (totalMg / 1000).toFixed(3) + "g"; 
     document.getElementById('goldGram').innerText = (td * (4.25/27)).toFixed(3) + "g"; 
     renderLog(); 
-    checkInbox();
 }
 
 function renderLog() {
-    document.getElementById('historyLog').innerHTML = history.slice(0, 30).map(h => {
-        // Visual Cues based on Flow
+    // Render hanya history yang valid
+    const validLogs = history.filter(h => h && h.val);
+    document.getElementById('historyLog').innerHTML = validLogs.slice(0, 30).map(h => {
         let color = h.flow === 'IN' ? '#2ecc71' : '#e74c3c';
         let arrow = h.flow === 'IN' ? '⬇️' : '⬆️';
-        if(!h.flow) { color = '#777'; arrow = '?'; } // Legacy handling
+        // Handle legacy data visual
+        if(!h.flow) { 
+            if(h.t && h.t.includes('MASUK')) { color='#2ecc71'; arrow='⬇️'; }
+            else { color='#e74c3c'; arrow='⬆️'; }
+        }
         
         return `
         <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #222; align-items:center;">
@@ -433,7 +464,7 @@ function renderLog() {
                 <span style="color:${color}; font-weight:bold; font-size:0.75rem;">${arrow} ${h.label}</span><br>
                 <small style="color:#555;">${h.time}</small>
             </div>
-            ${h.flow === 'OUT' ? `<button onclick="reShow('${h.raw}')" style="font-size:0.55rem; background:#222; color:#f39c12; border:1px solid #444; padding:3px 6px; border-radius:4px;">QR ULANG</button>` : `<span style="font-size:0.5rem; color:#444;">VERIFIED</span>`}
+            ${h.flow === 'OUT' || (h.t && h.t.includes('KELUAR')) ? `<button onclick="reShow('${h.raw}')" style="font-size:0.55rem; background:#222; color:#f39c12; border:1px solid #444; padding:3px 6px; border-radius:4px;">QR ULANG</button>` : `<span style="font-size:0.5rem; color:#444;">VERIFIED</span>`}
         </div>`
     }).join('');
 }
@@ -441,8 +472,7 @@ function renderLog() {
 // --- STANDARD FUNCTIONS ---
 function openTransfer() { document.getElementById('transferModal').style.display = 'flex'; }
 function showMyID() { document.getElementById('myIdModal').style.display = 'flex'; document.getElementById('textMyId').innerText = myID; document.getElementById('qrMyId').innerHTML = ""; new QRCode(document.getElementById("qrMyId"), { text: "ID:" + myID, width: 200, height: 200 }); }
-async function checkInbox() { if(!myID) return; try { let res = await fetch(`${DB_URL}inbox/${myID}.json`); let data = await res.json(); if(data) { let c=0; for (let k in data) { await execClaimSilent(data[k]); await fetch(`${DB_URL}inbox/${myID}/${k}.json`, { method: 'DELETE' }); c++; } if(c>0){ alert(`📬 ${c} Transfer Masuk!`); updateUI(); } } } catch(e){} }
-async function forceReport() { let btn = document.querySelector('.btn-report'); btn.innerText = "..."; try { await fetch(`${DB_URL}census_report/${myID}.json`, { method: 'PUT', body: JSON.stringify({ name: myID, balance_mg: totalMg, last: Date.now() }) }); alert("Sensus OK"); } catch(e){} btn.innerText = "📡 LAPOR"; }
+async function forceReport() { let btn = document.querySelector('.btn-report'); btn.innerText = "..."; try { await fetch(`${DB_URL}census_report/${myID}.json`, { method: 'PUT', body: JSON.stringify({ name: myID, balance_mg: totalMg, last: Date.now() }) }); alert("Sensus OK"); checkInbox(); } catch(e){} btn.innerText = "📡 LAPOR"; }
 function startSetupScan() { document.getElementById('setupReaderWrapper').style.display = 'block'; setupQrCode = new Html5Qrcode("setupReader"); setupQrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (txt) => { document.getElementById('loginKey').value = txt; stopSetupScan(); }, () => {}); }
 function stopSetupScan() { if(setupQrCode) setupQrCode.stop().then(() => { document.getElementById('setupReaderWrapper').style.display = 'none'; }); }
 function startScanner() { document.getElementById('scanner-wrapper').style.display = 'block'; html5QrCode = new Html5Qrcode("reader"); html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (txt) => { stopScanner(); if(txt.startsWith("ID:")) { openTransfer(); document.getElementById('trfDest').value = txt.split(":")[1]; } else { document.getElementById('tokenIn').value = txt; execClaim(); } }, () => {}); }
@@ -452,8 +482,11 @@ function toggleClaimManual() { let m = document.getElementById('manualClaim'); m
 function createSig(d, k) { let s = d + k; let h = 0; for (let i = 0; i < s.length; i++) { h = ((h << 5) - h) + s.charCodeAt(i); h |= 0; } return Math.abs(h).toString(36); }
 function reShow(t) { document.getElementById('qrResult').style.display = 'block'; document.getElementById('qrcode').innerHTML = ""; new QRCode(document.getElementById("qrcode"), { text: t, width: 200, height: 200 }); document.getElementById('textToken').innerText = t; }
 function copy(el) { navigator.clipboard.writeText(el.innerText); alert("Token Disalin"); }
-function clearHistory() { if(confirm("Reset Log tampilan? Saldo tetap aman.")) { history = []; localStorage.setItem('nw_hist', JSON.stringify(history)); updateUI(); } }
+function clearHistory() { if(confirm("Reset Log tampilan? Saldo tetap aman.")) { history = []; updateBalanceFromHistory(); updateUI(); } }
 function logout() { location.reload(); }
+
+// Auto Check Inbox Interval (Every 10s)
+setInterval(checkInbox, 10000);
 </script>
 </body>
 </html>
