@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nuswantara Wallet v22.7 (Permanent Ledger)</title>
+    <title>Nuswantara Wallet v22.8 (Anti-Double)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
@@ -57,7 +57,7 @@
     <div id="walletPanel" style="display:none;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
             <div style="text-align:left;">
-                <span style="font-size: 0.65rem; color: #f39c12; letter-spacing: 1px; font-weight: bold;">NUSWANTARA v22.7</span><br>
+                <span style="font-size: 0.65rem; color: #f39c12; letter-spacing: 1px; font-weight: bold;">NUSWANTARA v22.8</span><br>
                 <div style="display:flex; align-items:center;">
                     <div id="myIDDisplay" class="id-badge">ID: ...</div>
                     <button onclick="forceReport()" class="btn-report">📡 LAPOR</button>
@@ -138,7 +138,7 @@
         <div style="border-top: 1px solid #222; padding-top:15px; margin-top: 20px;">
             <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px;">
                 <label style="font-size: 0.6rem; color: #444; text-transform: uppercase;">Riwayat Transaksi:</label>
-                </div>
+            </div>
             <div id="historyLog" style="height:150px; overflow-y:auto; font-size:0.65rem; background:#000; border-radius:12px; padding:12px;"></div>
         </div>
     </div>
@@ -224,12 +224,27 @@ if(savedKey === "") {
     document.getElementById('lockTitle').innerText = "LOGIN WALLET";
 }
 
-// --- LOGIC SALDO ---
+// --- LOGIC SALDO DENGAN AUTO-CLEANER ---
 function recalcBalance() {
     let calc = 0;
     if(!Array.isArray(history)) history = [];
     history = history.filter(h => h && h.val !== undefined && h.val !== null);
 
+    // --- AUTO CLEANER: Hapus Duplikat Berdasarkan ID Transaksi ---
+    const uniqueMap = new Map();
+    history.forEach(item => {
+        // Jika ID sudah ada, ambil yang timestampnya lebih baru atau pertahankan yang ada
+        if (!uniqueMap.has(item.txId)) {
+            uniqueMap.set(item.txId, item);
+        }
+    });
+    // Update history jadi bersih (tanpa kembar)
+    history = Array.from(uniqueMap.values());
+    
+    // Sortir history biar yang baru di atas
+    history.sort((a, b) => new Date(b.time) - new Date(a.time));
+
+    // Hitung Saldo Bersih
     history.forEach(h => {
         let val = Number(h.val);
         if (isNaN(val)) val = 0;
@@ -244,7 +259,7 @@ function recalcBalance() {
     updateUI();
 }
 
-// --- SMART SYNC ---
+// --- SMART SYNC (STRICT MODE) ---
 async function fullRecovery() {
     if(!myID) return;
     let statusEl = document.getElementById('syncStatus');
@@ -264,6 +279,7 @@ async function fullRecovery() {
         }
 
         let incomingHistory = [];
+        // Catat ID yang SUDAH ada di HP
         let existingIds = new Set(history.map(h => h.txId));
 
         for (let key in ledger) {
@@ -274,6 +290,7 @@ async function fullRecovery() {
 
             if(isMine) {
                 let txId = tx.tx_id || key;
+                // STRICT CHECK: Cuma masukin kalo bener-bener belum ada
                 if(!existingIds.has(txId)) {
                     incomingHistory.push({
                         flow: flow,
@@ -290,8 +307,8 @@ async function fullRecovery() {
         }
 
         if (incomingHistory.length > 0) {
-            history = [...incomingHistory.reverse(), ...history];
-            recalcBalance(); 
+            history = [...incomingHistory, ...history];
+            recalcBalance(); // Cleaner jalan otomatis disini
             statusEl.innerHTML = "✅ Data Tergabung";
             statusEl.style.color = "#2ecc71";
             alert(`SINKRONISASI: ${incomingHistory.length} Transaksi baru disalin ke HP.`);
@@ -414,7 +431,7 @@ async function quickSend(mg, label) {
     document.getElementById('textToken').innerText = token;
 }
 
-// --- CLAIM + RECOVERY ---
+// --- CLAIM + RECOVERY + DEDUPLICATION ---
 async function execClaim() {
     let input = document.getElementById('tokenIn').value.replace("TOKEN-", "").trim();
     if(!input) return;
@@ -427,31 +444,35 @@ async function execClaim() {
         let mg = Number(parts[0]);
         let nonce = parts[2];
 
+        // 0. CEK LOKAL DULU (Anti-Double Paling Awal)
+        let exists = history.some(h => h.txId === nonce);
+        if(exists) {
+            alert("⚠️ Token ini sudah ada di riwayat Anda!");
+            document.getElementById('manualClaim').style.display = 'none'; 
+            document.getElementById('tokenIn').value = "";
+            return;
+        }
+
         const check = await fetch(`${DB_URL}used_tokens/${nonce}.json`);
         const cloudData = await check.json();
         
         // RECOVERY MODE
         if(cloudData && cloudData.claimed) {
             if(cloudData.by === myID) {
-                let exists = history.some(h => h.txId === nonce);
-                if(!exists) {
-                    history.unshift({ 
-                        flow: 'IN', 
-                        t: 'MASUK (RECOVERY)', 
-                        label: (mg/MG_PER_DIRHAM).toFixed(2) + " Dr", 
-                        val: mg, 
-                        raw: input, 
-                        txId: nonce, 
-                        time: new Date().toLocaleTimeString() 
-                    });
-                    recalcBalance();
-                    alert("♻️ TOKEN LAMA DIPULIHKAN! Saldo masuk kembali.");
-                    document.getElementById('manualClaim').style.display = 'none'; 
-                    document.getElementById('tokenIn').value = "";
-                    return; 
-                } else {
-                    throw "Token ini sudah ada di riwayat Anda.";
-                }
+                history.unshift({ 
+                    flow: 'IN', 
+                    t: 'MASUK (RECOVERY)', 
+                    label: (mg/MG_PER_DIRHAM).toFixed(2) + " Dr", 
+                    val: mg, 
+                    raw: input, 
+                    txId: nonce, 
+                    time: new Date().toLocaleTimeString() 
+                });
+                recalcBalance();
+                alert("♻️ TOKEN LAMA DIPULIHKAN! Saldo masuk kembali.");
+                document.getElementById('manualClaim').style.display = 'none'; 
+                document.getElementById('tokenIn').value = "";
+                return; 
             } else {
                 throw "Token sudah dipakai orang lain!";
             }
@@ -504,6 +525,14 @@ async function checkInbox() {
                     let mg = Number(parts[0]);
                     let nonce = parts[2];
                     
+                    // FIX: Cek apakah ID transaksi ini sudah ada di history (entah dari Sync atau Manual Scan)
+                    let isDuplicate = history.some(h => h.txId === nonce);
+                    if(isDuplicate) {
+                        // Hapus dari inbox karena datanya udah ada di HP
+                        await fetch(`${DB_URL}inbox/${myID}/${k}.json`, { method: 'DELETE' });
+                        continue; // Skip loop, jangan proses
+                    }
+
                     let check = await fetch(`${DB_URL}used_tokens/${nonce}.json`);
                     let cd = await check.json();
                     
@@ -574,7 +603,7 @@ function logout() { location.reload(); }
 
 window.onload = function() {
     if(savedKey) {
-       recalcBalance();
+       recalcBalance(); // Bersih-bersih otomatis saat load
        updateUI();
     }
 }
