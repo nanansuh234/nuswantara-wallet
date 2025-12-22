@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nuswantara Public Ledger v4.9</title>
+    <title>Nuswantara Public Ledger v5.0</title>
     <style>
         :root { --neon: #d4af37; --bg: #050505; --card: #111; --border: #333; }
         body { background-color: var(--bg); color: #e0e0e0; font-family: 'Segoe UI', monospace; margin: 0; padding: 20px; }
         .container { max-width: 950px; margin: 0 auto; border: 1px solid var(--border); border-radius: 15px; padding: 20px; box-shadow: 0 0 60px rgba(0,0,0,0.8); background: #0b0b0b; }
         
-        /* HEADER WAKTU (OFFSET CALIBRATED) */
+        /* HEADER WAKTU (DAY CYCLE) */
         .time-header { text-align: center; border-bottom: 2px solid var(--neon); padding-bottom: 15px; margin-bottom: 20px; background: rgba(20,20,20,0.6); border-radius: 10px; padding-top: 15px; border: 1px solid #222; }
         .nusa-year { font-size: 0.8rem; color: #777; letter-spacing: 4px; text-transform: uppercase; margin-bottom: 5px; }
         .nusa-date { font-size: 1.8rem; color: var(--neon); font-weight: bold; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 5px; text-shadow: 0 0 15px rgba(212, 175, 55, 0.4); }
@@ -18,7 +18,7 @@
         .nusa-digital { font-size: 1.2rem; color: #f39c12; font-family: 'Courier New', monospace; background: #000; padding: 2px 8px; border-radius: 4px; border: 1px solid #444; }
         .nusa-desc { font-size: 0.75rem; color: #aaa; font-style: italic; margin-top: 5px; }
 
-        /* LIVE STATUS */
+        /* STATUS & GRID */
         .sub-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 0 5px; }
         h1 { color: #f39c12; margin: 0; font-size: 1.1rem; letter-spacing: 2px; text-transform: uppercase; }
         .live-status { display: inline-flex; align-items: center; background: rgba(46, 204, 113, 0.1); border: 1px solid rgba(46, 204, 113, 0.3); padding: 5px 12px; border-radius: 20px; }
@@ -26,7 +26,6 @@
         .status-text { font-size: 0.65rem; color: #2ecc71; font-weight: bold; letter-spacing: 1px; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
 
-        /* DASHBOARD */
         .dashboard { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 15px; }
         .card { background: #141414; border: 1px solid #222; padding: 15px; text-align: center; border-radius: 10px; }
         .card-title { color: #888; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
@@ -35,21 +34,19 @@
         .silver { color: #bdc3c7; text-shadow: 0 0 10px rgba(189, 195, 199, 0.2); }
         .card-note { font-size: 0.55rem; color: #444; margin-top: 5px; font-style: italic; }
 
-        /* DAILY STATS */
         .daily-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 25px; }
         .mini-card { background: #141414; border: 1px solid #222; padding: 10px; text-align: center; border-radius: 8px; }
         .mini-label { font-size: 0.55rem; color: #555; text-transform: uppercase; letter-spacing: 0.5px; }
         .mini-val { font-size: 1rem; font-weight: bold; margin-top: 2px; font-family: monospace; }
         .limit-over { color: #e74c3c; animation: pulse 0.5s infinite; } .limit-warn { color: #f1c40f; } .limit-ok { color: #2ecc71; }
 
-        /* TABEL LOG */
         .ledger-box { border: 1px solid #222; height: 500px; overflow-y: auto; background: #000; padding: 0; border-radius: 10px; }
         table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
         th { text-align: left; background: #1a1a1a; padding: 12px 15px; color: #888; text-transform: uppercase; font-size: 0.6rem; position: sticky; top: 0; z-index: 10; border-bottom: 1px solid #333; letter-spacing: 1px; }
         td { border-bottom: 1px solid #111; padding: 10px 15px; vertical-align: top; }
         tr:hover { background: #0e0e0e; }
 
-        /* BADGES & FLOW */
+        /* BADGES */
         .badge { padding: 3px 6px; border-radius: 4px; font-size: 0.6rem; font-weight: bold; border: 1px solid transparent; display: inline-block; text-transform: uppercase; width: 70px; text-align: center; margin-bottom: 4px; }
         .bg-mint { background: rgba(46, 204, 113, 0.1); color: #2ecc71; border-color: #2ecc71; }
         .bg-trf { background: rgba(52, 152, 219, 0.1); color: #3498db; border-color: #3498db; }
@@ -146,11 +143,13 @@
     const MG_PER_DINAR = 80460;
     const DAILY_LIMIT = 1000;
     
-    // --- SETTING MANUAL OFFSET TANGGAL (PENTING!) ---
-    // Ganti angka ini jika tanggal masih meleset.
-    // 1 = Tambah 1 hari dari tanggal komputer.
-    // 0 = Sama dengan tanggal komputer.
+    // --- KONFIGURASI TANGGAL ---
+    // OFFSET: 1 (Karena di komputer user tanggal 22, tapi realitanya 23)
     const DATE_OFFSET = 1; 
+    
+    // START OF DAY: Jam 03:00 (Fase 4)
+    // Jadi hitungan tanggal baru dimulai saat jam >= 3
+    const DAY_START_HOUR = 3;
 
     const NUSA_MONTH_MAP = ["Wiwitan", "Gangga", "Bija", "Trubus", "Teja", "Baskara", "Kartika", "Huma", "Phala", "Reswara", "Purnaka", "LUMBUNG"]; 
     const PASARANS = ["Legi", "Pahing", "Pon", "Wage", "Kliwon"];
@@ -158,47 +157,53 @@
         "2025": { code: "001", label: "TAHUN 001 - AIR (VENUS)" },
         "2026": { code: "002", label: "TAHUN 002 - BATU (SATURNUS)" }
     };
+    
+    // Phase 3 (Hening) = Jam 00-03 Masehi. Phase 4 (Fajar) = Jam 03-06 Masehi (Ganti Hari)
     const PHASE_DB = [
         { id: 7, name: "ISTIWA", desc: "Hening/Istiwa", range: [12, 14] },
         { id: 8, name: "ASAR", desc: "Wrapping Up", range: [15, 17] },
         { id: 1, name: "SANDIKALA", desc: "Transisi & Sosial", range: [18, 20] },
         { id: 2, name: "SIREPAN", desc: "Istirahat Fisik", range: [21, 23] },
-        { id: 3, name: "HENING", desc: "Istirahat Mental", range: [0, 2] },
-        { id: 4, name: "FAJAR", desc: "The Golden Hour", range: [3, 5] },
+        { id: 3, name: "HENING", desc: "Istirahat Mental", range: [0, 2] }, // Masih Hari Kemarin
+        { id: 4, name: "FAJAR", desc: "The Golden Hour", range: [3, 5] },   // Start Hari Baru
         { id: 5, name: "DUHA", desc: "Start Engine", range: [6, 8] },
         { id: 6, name: "KARYA", desc: "High Performance", range: [9, 11] }
     ];
 
-    // --- KALKULASI JAM NUSWANTARA (90 Menit = 1 Jam Nusa) ---
+    // --- KALKULASI JAM NUSWANTARA (90 Menit) ---
     function convertToNusaClock(h, m) {
         let mTotal = ((h % 12) * 60) + m;
         let nTotalHours = mTotal / 90; 
         let nHour = Math.floor(nTotalHours);
         let nMin = Math.floor((nTotalHours % 1) * 90); 
-        
-        if (nHour === 0) nHour = 8; // Jam 0 (12:00/00:00) = Jam 8
+        if (nHour === 0) nHour = 8; 
         return `${String(nHour).padStart(2,'0')}:${String(nMin).padStart(2,'0')}`;
     }
 
-    // --- FUNGSI WAKTU & TANGGAL (WITH OFFSET) ---
+    // --- FUNGSI WAKTU (DAY CYCLE LOGIC) ---
     function getNusaCalendar(timestamp) {
-        // Buat object date
-        let dateObj = new Date(timestamp);
+        // Buat objek waktu
+        let rawDate = new Date(timestamp);
         
-        // --- APPLY OFFSET DISINI ---
-        // Menambah hari sesuai konfigurasi DATE_OFFSET
-        dateObj.setDate(dateObj.getDate() + DATE_OFFSET);
+        // 1. GESER JAM (-3 Jam)
+        // Agar jam 00:00 - 02:59 mundur ke tanggal kemarin.
+        // Jam 03:00 baru masuk tanggal hari ini.
+        let adjustedDate = new Date(rawDate.getTime());
+        adjustedDate.setHours(rawDate.getHours() - DAY_START_HOUR);
 
-        let year = dateObj.getFullYear();
-        let monthIdx = dateObj.getMonth();
-        let dateNum = dateObj.getDate(); 
+        // 2. APPLY OFFSET HARIAN (Manual Correction)
+        adjustedDate.setDate(adjustedDate.getDate() + DATE_OFFSET);
+
+        let year = adjustedDate.getFullYear();
+        let monthIdx = adjustedDate.getMonth();
+        let dateNum = adjustedDate.getDate(); 
 
         let config = YEAR_CONFIG[year] || { code: "XXX", label: `TAHUN M-${year}` };
         let monthName = NUSA_MONTH_MAP[monthIdx] || "SUWUNG";
 
-        // Pasaran (Hitung berdasarkan tanggal yang SUDAH di-offset)
+        // Pasaran Hitung
         let anchor2025 = new Date(2025, 2, 21);
-        let diffTotal = Math.floor((dateObj - anchor2025) / 86400000);
+        let diffTotal = Math.floor((adjustedDate - anchor2025) / 86400000);
         let pIdx = (2 + (diffTotal % 5)) % 5; 
         if(pIdx < 0) pIdx += 5;
 
@@ -218,6 +223,9 @@
         let m = d.getMinutes();
         
         let seqIdx = Math.floor(h / 3); 
+        // Mapping index ke Phase ID
+        // 0 (00-02) -> Phase 3 (Hening)
+        // 1 (03-05) -> Phase 4 (Fajar)
         const phaseMap = [3, 4, 5, 6, 7, 8, 1, 2];
         let pId = phaseMap[seqIdx];
         let p = PHASE_DB.find(x => x.id === pId);
@@ -246,7 +254,7 @@
     setInterval(updateHeader, 1000);
     updateHeader();
 
-    // --- HELPER FLOW ---
+    // --- FLOW HELPER ---
     function formatFlowID(id) {
         if(!id || id === "SYS" || id === "SYSTEM" || id === "BANK") {
             return `<span class="sys-badge">SYSTEM</span>`;
@@ -272,8 +280,17 @@
 
             let html = "";
             let supplyMg = 0;
-            let today = new Date(); today.setHours(0,0,0,0);
-            let startOfDay = today.getTime();
+            
+            // Daily Limit Check: Pakai Logika Fajar (03:00)
+            let now = new Date();
+            let todayStart = new Date(now);
+            // Jika sekarang < jam 3, start of day adalah jam 3 KEMARIN
+            if(now.getHours() < DAY_START_HOUR) {
+                todayStart.setDate(todayStart.getDate() - 1);
+            }
+            todayStart.setHours(DAY_START_HOUR, 0, 0, 0);
+            let startLimitTime = todayStart.getTime();
+
             let dCount=0, dTrf=0, dMint=0;
 
             txs.forEach(tx => {
@@ -296,7 +313,7 @@
                     badgeClass="bg-trf"; badgeLabel="KIRIM";
                 }
 
-                if(t >= startOfDay) {
+                if(t >= startLimitTime) {
                     dCount++;
                     if(tx.type === 'MINT' || tx.type === 'ISSUED') dMint++;
                     else if(tx.type === 'P2P' || tx.type === 'TRANSFER' || !tx.type) dTrf++;
