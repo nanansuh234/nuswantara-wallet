@@ -3,351 +3,303 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LIVE PUBLIC LEDGER - NUSWANTARA STANDARD</title>
+    <title>Nuswantara Public Ledger</title>
     <style>
-        body { 
-            background-color: #050505; 
-            color: #ccc; 
-            font-family: 'Segoe UI', 'Courier New', monospace; 
-            margin: 0; 
-            padding: 20px; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            min-height: 100vh;
-        }
-
-        .container { 
-            width: 100%; 
-            max-width: 1000px; 
-            border: 1px solid #222; 
-            background: #090909; 
-            border-radius: 15px; 
-            overflow: hidden; 
-            box-shadow: 0 0 80px rgba(212, 175, 55, 0.1);
-        }
-
+        body { background-color: #0a0a0a; color: #e0e0e0; font-family: 'Segoe UI', monospace; margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; border: 1px solid #333; border-radius: 15px; padding: 20px; box-shadow: 0 0 40px rgba(0,0,0,0.8); background: #111; position: relative; }
+        
         /* HEADER */
-        .header {
-            background: #111;
-            padding: 20px 30px;
-            border-bottom: 1px solid #222;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .brand h1 { margin: 0; font-size: 1.2rem; color: #d4af37; letter-spacing: 3px; text-transform: uppercase; font-weight: 800; }
-        .sub-head { font-size: 0.75rem; color: #666; letter-spacing: 1px; }
-
-        /* JAM NUSWANTARA DISPLAY */
-        .clock-box { text-align: right; }
+        .header-box { text-align: center; margin-bottom: 25px; border-bottom: 1px solid #222; padding-bottom: 20px; }
+        h1 { color: #f39c12; margin: 0 0 5px 0; letter-spacing: 3px; text-transform: uppercase; font-size: 1.5rem; text-shadow: 0 0 10px rgba(243, 156, 18, 0.3); }
         
-        .clock-main {
-            font-size: 2rem;
-            color: #d4af37; 
-            font-weight: bold;
-            font-family: monospace;
-            text-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
-            letter-spacing: 2px;
-            line-height: 1;
-        }
-        
-        .period-badge {
-            font-size: 0.7rem;
-            background: #222;
-            color: #fff;
-            padding: 2px 6px;
-            border-radius: 4px;
-            border: 1px solid #444;
-            vertical-align: text-top;
-            margin-left: 5px;
+        .live-status { display: inline-flex; align-items: center; justify-content: center; background: rgba(46, 204, 113, 0.1); border: 1px solid rgba(46, 204, 113, 0.3); padding: 5px 12px; border-radius: 20px; margin-top: 10px; }
+        .blink-dot { width: 8px; height: 8px; background-color: #2ecc71; border-radius: 50%; display: inline-block; margin-right: 8px; box-shadow: 0 0 8px #2ecc71; animation: pulse 1.5s infinite; }
+        .status-text { font-size: 0.7rem; color: #2ecc71; font-weight: bold; letter-spacing: 1px; text-transform: uppercase; }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7); opacity: 1; }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(46, 204, 113, 0); opacity: 0.8; }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); opacity: 1; }
         }
 
-        .clock-date {
-            font-size: 0.8rem;
-            color: #fff;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-weight: bold;
-            margin-top: 5px;
-        }
-        
-        .clock-fase {
-            font-size: 0.65rem;
-            color: #3498db;
-            letter-spacing: 1px;
-            font-style: italic;
-            margin-top: 2px;
-        }
+        /* DASHBOARD GRID (SIRKULASI) */
+        .dashboard { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 15px; }
+        .card { background: #161616; border: 1px solid #333; padding: 20px; text-align: center; border-radius: 10px; }
+        .card-title { color: #aaa; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+        .card-val { font-size: 1.8rem; font-weight: bold; color: #fff; }
+        .gold { color: #f1c40f; text-shadow: 0 0 10px rgba(241, 196, 15, 0.2); }
+        .silver { color: #bdc3c7; text-shadow: 0 0 10px rgba(189, 195, 199, 0.2); }
 
-        /* STATS */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            border-bottom: 2px solid #333;
-        }
-        .stat-card {
-            padding: 20px;
-            text-align: center;
-            border-right: 1px solid #222;
-            background: #0e0e0e;
-        }
-        .stat-card:last-child { border-right: none; }
+        /* DAILY STATS GRID (NEW) */
+        .daily-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 25px; }
+        .mini-card { background: #1a1a1a; border: 1px solid #222; padding: 10px; text-align: center; border-radius: 8px; }
+        .mini-label { font-size: 0.6rem; color: #777; text-transform: uppercase; letter-spacing: 0.5px; }
+        .mini-val { font-size: 1.1rem; font-weight: bold; margin-top: 5px; font-family: monospace; }
         
-        .stat-val { font-size: 2.5rem; font-weight: bold; margin: 5px 0; }
-        .stat-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 2px; color: #666; }
+        .limit-ok { color: #2ecc71; }
+        .limit-warn { color: #f1c40f; }
+        .limit-over { color: #e74c3c; animation: pulse 0.5s infinite; }
+
+        /* TABEL LOG */
+        .ledger-box { border: 1px solid #222; height: 500px; overflow-y: auto; background: #000; padding: 0; border-radius: 10px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
         
-        .gold-txt { color: #d4af37; text-shadow: 0 0 20px rgba(241, 196, 15, 0.2); }
-        .silver-txt { color: #bdc3c7; text-shadow: 0 0 20px rgba(189, 195, 199, 0.2); }
+        th { text-align: left; background: #1a1a1a; padding: 12px 15px; color: #888; text-transform: uppercase; font-size: 0.65rem; position: sticky; top: 0; z-index: 10; border-bottom: 2px solid #333; letter-spacing: 1px; }
+        td { border-bottom: 1px solid #1a1a1a; padding: 12px 15px; vertical-align: top; }
+        tr:hover { background: #0f0f0f; }
 
-        /* LIST */
-        #ledgerList { height: 60vh; overflow-y: auto; }
-
-        .tx-row {
-            display: grid;
-            grid-template-columns: 1.6fr 1.4fr 1.5fr 1fr; 
-            padding: 15px 30px;
-            border-bottom: 1px solid #1a1a1a;
-            align-items: center;
-            transition: 0.2s;
-            font-size: 0.9rem;
-        }
-        .tx-row:hover { background: #151515; }
+        /* TIME & DATE */
+        .time-sunda { color: #fff; font-weight: bold; display: block; margin-bottom: 3px; }
+        .time-wib { color: #f39c12; font-size: 0.7rem; font-weight: bold; }
+        .time-greg { color: #555; font-size: 0.65rem; display: block; margin-top: 2px; }
         
-        .col-head { background: #0e0e0e; color: #555; font-size: 0.7rem; font-weight: bold; border-bottom: 1px solid #222; }
-
         /* BADGES */
-        .badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.65rem; text-transform: uppercase; display: inline-block; }
-        .type-mint { background: rgba(46, 204, 113, 0.15); color: #2ecc71; border: 1px solid #2ecc71; }
-        .type-burn { background: rgba(231, 76, 60, 0.15); color: #e74c3c; border: 1px solid #e74c3c; }
-        .type-transfer { background: rgba(52, 152, 219, 0.15); color: #3498db; border: 1px solid #3498db; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.6rem; font-weight: bold; border: 1px solid transparent; display: inline-block; text-transform: uppercase; letter-spacing: 1px; width: 80px; text-align: center; }
+        .bg-mint { background: rgba(46, 204, 113, 0.1); color: #2ecc71; border-color: #2ecc71; box-shadow: 0 0 5px rgba(46, 204, 113, 0.2); }
+        .bg-trf { background: rgba(52, 152, 219, 0.1); color: #3498db; border-color: #3498db; }
+        .bg-burn { background: rgba(231, 76, 60, 0.1); color: #e74c3c; border-color: #e74c3c; box-shadow: 0 0 5px rgba(231, 76, 60, 0.2); }
 
-        .val-plus { color: #2ecc71; font-weight: bold; }
-        .val-min { color: #e74c3c; font-weight: bold; }
-        .val-neutral { color: #3498db; font-weight: bold; }
+        .tx-val { font-weight: bold; font-size: 0.95rem; font-family: monospace; }
+        .tx-id { font-family: monospace; color: #444; font-size: 0.65rem; margin-top: 5px; display: block; }
         
-        .tx-id { color: #444; font-size: 0.7rem; cursor: pointer; font-family: monospace; text-align: right; }
-        .tx-id:hover { color: #888; text-decoration: underline; }
-        
-        .time-box { display: flex; flex-direction: column; }
-        .time-main { color: #d4af37; font-weight: bold; font-size: 0.8rem; }
-        .time-sub { color: #666; font-size: 0.7rem; font-style: italic; }
-        .sender-info { display: block; font-size: 0.65rem; color: #666; margin-top: 4px; font-style: italic; }
-
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #090909; }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        .refresh-btn { background: #222; color: #aaa; border: 1px solid #444; padding: 12px; width: 100%; border-radius: 8px; cursor: pointer; margin-top: 20px; transition: 0.3s; font-weight: bold; letter-spacing: 1px; }
+        .refresh-btn:hover { background: #333; color: white; border-color: #f39c12; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="header">
-        <div class="brand">
-            <h1>PUBLIC LEDGER</h1>
-            <div class="sub-head">MONITOR KEUANGAN NUSWANTARA</div>
-        </div>
-        <div class="clock-box">
-            <div class="clock-main">
-                <span id="nTime">00:00</span>
-                <span id="nPeriod" class="period-badge">...</span>
-            </div>
-            <div class="clock-date" id="nDateFull">...</div>
-            <div class="clock-fase" id="nFase">...</div>
+    <div class="header-box">
+        <h1>🏛️ PUBLIC LEDGER</h1>
+        <div class="live-status">
+            <span class="blink-dot"></span>
+            <span class="status-text">JARINGAN UTAMA AKTIF</span>
         </div>
     </div>
-
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-label">Sirkulasi Setara Emas</div>
-            <div class="stat-val gold-txt" id="sumDinar">0.00 <span style="font-size:1rem;">Dn</span></div>
+    
+    <div class="dashboard">
+        <div class="card">
+            <div class="card-title">Sirkulasi Global (Emas)</div>
+            <div id="circDinar" class="card-val gold">0.00 Dn</div>
+            <div id="eqGold" style="font-size:0.65rem; color:#666; margin-top:5px;">... Gram Au</div>
         </div>
-        <div class="stat-card">
-            <div class="stat-label">Sirkulasi Setara Perak</div>
-            <div class="stat-val silver-txt" id="sumDirham">0.00 <span style="font-size:1rem;">Dr</span></div>
+        <div class="card">
+            <div class="card-title">Sirkulasi Global (Perak)</div>
+            <div id="circDirham" class="card-val silver">0.00 Dr</div>
+            <div id="eqSilver" style="font-size:0.65rem; color:#666; margin-top:5px;">... Gram Ag</div>
         </div>
     </div>
 
-    <div class="tx-row col-head">
-        <div>WAKTU (NUSA)</div>
-        <div>JENIS TRANSAKSI</div>
-        <div>NOMINAL</div>
-        <div style="text-align:right;">ID TRANSAKSI</div>
+    <div class="daily-stats">
+        <div class="mini-card">
+            <div class="mini-label">QUOTA HARIAN (LIMIT)</div>
+            <div id="dailyTotalDisplay" class="mini-val limit-ok">0 / 1000</div>
+        </div>
+        <div class="mini-card" style="border-color: #3498db;">
+            <div class="mini-label" style="color:#3498db;">TRANSFER HARI INI</div>
+            <div id="dailyTrfCount" class="mini-val" style="color:#3498db;">0</div>
+        </div>
+        <div class="mini-card" style="border-color: #2ecc71;">
+            <div class="mini-label" style="color:#2ecc71;">CETAK HARI INI</div>
+            <div id="dailyMintCount" class="mini-val" style="color:#2ecc71;">0</div>
+        </div>
     </div>
 
-    <div id="ledgerList">
-        <div style="padding:50px; text-align:center; color:#333;">Memuat data blockchain...</div>
+    <div class="ledger-box">
+        <table id="ledgerTable">
+            <thead>
+                <tr>
+                    <th width="30%">Waktu (Sunda/Nusa)</th>
+                    <th width="20%">Tipe Transaksi</th>
+                    <th width="30%">Arus (Dari &rarr; Ke)</th>
+                    <th width="20%" style="text-align:right;">Nominal</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <tr><td colspan="4" style="text-align:center; padding:50px; color:#555;">
+                    <span style="display:inline-block; animation: pulse 1s infinite;">📡</span><br>Menghubungkan ke Node Nuswantara...
+                </td></tr>
+            </tbody>
+        </table>
     </div>
+
+    <button onclick="loadLedger()" class="refresh-btn">🔄 SEGARKAN DATA</button>
 </div>
 
 <script>
-    /* =======================================================
-       NUSWANTARA STANDARD LIBRARY (CORE)
-       Epoch: 21 Maret 2025 (Jumat Pahing) = 01 Wiwitan 001
-       ======================================================= */
-    
     const DB_URL = "https://pasarnuswantara-default-rtdb.asia-southeast1.firebasedatabase.app/";
-    const MG_PER_DINAR = 80460;
     const MG_PER_DIRHAM = 2980;
+    const MG_PER_DINAR = 80460;
+    const DAILY_LIMIT = 1000;
 
-    const NUSA = {
-        EPOCH: new Date(2025, 2, 21), // 21 Maret 2025
-        EPOCH_DAY_IDX: 5, // Jumat (0=Radite/Minggu)
-        EPOCH_PASARAN_IDX: 1, // Pahing (0=Legi)
-        MONTHS: ["Wiwitan", "Gangga", "Bija", "Trubus", "Teja", "Baskara", "Kartika", "Huma", "Phala", "Lumbung", "Reswara", "Purnaka", "Suwung"],
-        DAYS: ["Radite", "Soma", "Anggara", "Buda", "Respati", "Sukra", "Tumpek"],
-        PASARANS: ["Legi", "Pahing", "Pon", "Wage", "Kliwon"],
-        PHASES: [
-            { id: 7, name: "ISTIWA (8-2 Siang)" }, { id: 8, name: "ASAR (2-4 Siang)" },
-            { id: 1, name: "SANDIKALA (4-6 Malam)" }, { id: 2, name: "SIREPAN (6-8 Malam)" },
-            { id: 3, name: "HENING (8-2 Malam)" }, { id: 4, name: "FAJAR (2-4 Malam)" },
-            { id: 5, name: "DUHA (4-6 Siang)" }, { id: 6, name: "KARYA (6-8 Siang)" }
-        ]
-    };
+    // --- KAMUS SUNDA NUSWANTARA ---
+    const SAPTAWARA = ["Radite", "Soma", "Anggara", "Buda", "Respati", "Sukra", "Tumpek"]; 
+    const PANCAWARA = ["Manis", "Pahing", "Pon", "Wage", "Kaliwon"];
+    const BULAN_SUNDA = ["Kasa", "Karo", "Katiga", "Kapat", "Kalima", "Kanem", "Kapitu", "Kawalu", "Kasanga", "Kadasa", "Hapit Lemah", "Hapit Kayu"];
 
-    // 1. FUNGSI WAKTU (JAM 1-8)
-    function getNusaTime(dateObj) {
-        const h = dateObj.getHours();
-        const m = dateObj.getMinutes();
-        const s = dateObj.getSeconds();
+    function getPasaran(date) {
+        const refDate = new Date(2020, 0, 1); 
+        const oneDay = 24 * 60 * 60 * 1000;
+        const diffDays = Math.round((date.getTime() - refDate.getTime()) / oneDay);
+        let result = (1 + diffDays) % 5; 
+        if (result < 0) result += 5;
+        return PANCAWARA[result];
+    }
 
-        let mTotalMin = ((h % 12) * 60) + m + (s/60);
-        let nTotalHours = mTotalMin / 90; 
+    function formatSunda(timestamp) {
+        let d = new Date(timestamp);
+        let hari = SAPTAWARA[d.getDay()];
+        let pasaran = getPasaran(d);
+        let tgl = d.getDate();
+        let bln = BULAN_SUNDA[d.getMonth()];
+        let thn = d.getFullYear(); 
         
-        let dHour = Math.floor(nTotalHours) || 8;
-        let dMin = Math.floor((nTotalHours % 1) * 90);
-        
-        let period = (h >= 6 && h < 18) ? "SIANG" : "MALAM";
-        let seqIdx = Math.floor(h / 3);
-        let currentPhase = NUSA.PHASES.find(p => p.id === [3, 4, 5, 6, 7, 8, 1, 2][seqIdx]);
+        let jam = d.getHours().toString().padStart(2, '0');
+        let menit = d.getMinutes().toString().padStart(2, '0');
 
         return {
-            str: `${String(dHour).padStart(2, '0')}:${String(dMin).padStart(2, '0')}`,
-            period: period,
-            fase: currentPhase ? currentPhase.name : ""
+            sunda: `${hari} ${pasaran}, ${tgl} ${bln}`,
+            jam: `${jam}:${menit} WIB`,
+            greg: d.toLocaleDateString()
         };
     }
 
-    // 2. FUNGSI KALENDER (EPOCH BASED)
-    function getNusaDate(dateObj) {
-        // A. Hitung Selisih Hari Total dari Epoch
-        // Kita pakai UTC di internal agar tidak kena Daylight Saving/Zona Waktu aneh
-        let uNow = Date.UTC(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
-        let uEpoch = Date.UTC(2025, 2, 21);
-        let diffDays = Math.floor((uNow - uEpoch) / (1000 * 60 * 60 * 24));
-
-        // B. Hitung Hari & Pasaran (Pasti Akurat)
-        // Pakai rumus (Awal + Diff) % Siklus. Tambah kelipatan besar agar support tanggal mundur.
-        let dayIdx = (NUSA.EPOCH_DAY_IDX + diffDays) % 7;
-        if (dayIdx < 0) dayIdx += 7;
-        
-        let pasaranIdx = (NUSA.EPOCH_PASARAN_IDX + diffDays) % 5;
-        if (pasaranIdx < 0) pasaranIdx += 5;
-
-        // C. Hitung Tahun & Bulan (Solar Anchor 21 Maret)
-        let yr = dateObj.getFullYear();
-        let anchor = new Date(yr, 2, 21);
-        if (dateObj < anchor) {
-            anchor = new Date(yr - 1, 2, 21);
-            yr--; 
-        }
-        
-        // Hitung hari sejak 21 Maret tahun tersebut
-        let uAnchor = Date.UTC(anchor.getFullYear(), anchor.getMonth(), anchor.getDate());
-        let daysSinceAnchor = Math.floor((uNow - uAnchor) / (1000 * 60 * 60 * 24));
-        
-        let nMonthIdx = 0;
-        let nDate = 0;
-
-        if (daysSinceAnchor < 336) { // 12 Sasih x 28
-            nMonthIdx = Math.floor(daysSinceAnchor / 28);
-            nDate = (daysSinceAnchor % 28) + 1;
-        } else { // Sasih ke-13 (Suwung)
-            nMonthIdx = 12;
-            nDate = (daysSinceAnchor - 336) + 1;
-        }
-
-        let nYear = yr - 2024; // 2025 = Tahun 1
-
-        return {
-            dayName: NUSA.DAYS[dayIdx],
-            pasaran: NUSA.PASARANS[pasaranIdx],
-            date: nDate,
-            month: NUSA.MONTHS[nMonthIdx],
-            year: String(nYear).padStart(3, '0'),
-            full: `${NUSA.DAYS[dayIdx]}, ${nDate} ${NUSA.MONTHS[nMonthIdx]} ${String(nYear).padStart(3, '0')} | ${NUSA.PASARANS[pasaranIdx]}`
-        };
-    }
-
-    // --- MAIN APP ---
-
-    function updateClock() {
-        const now = new Date();
-        const t = getNusaTime(now);
-        const d = getNusaDate(now);
-        
-        document.getElementById('nTime').innerText = t.str;
-        document.getElementById('nPeriod').innerText = t.period;
-        document.getElementById('nDateFull').innerText = d.full;
-        document.getElementById('nFase').innerText = t.fase;
-    }
-    setInterval(updateClock, 1000); updateClock();
-
-    async function fetchAllData() {
-        let bust = "?r=" + Date.now();
+    async function loadLedger() {
+        const tbody = document.getElementById('tableBody');
         try {
-            // Stats
-            let resStats = await fetch(`${DB_URL}market_stats.json${bust}`);
-            let stats = await resStats.json();
-            let totalMg = (stats && stats.total_supply_mg) ? parseInt(stats.total_supply_mg) : 0;
-            document.getElementById('sumDinar').innerHTML = `${(totalMg/MG_PER_DINAR).toFixed(2)} <span style="font-size:1rem;">Dn</span>`;
-            document.getElementById('sumDirham').innerHTML = `${(totalMg/MG_PER_DIRHAM).toFixed(2)} <span style="font-size:1rem;">Dr</span>`;
+            let res = await fetch(`${DB_URL}public_ledger.json`);
+            let data = await res.json();
+            
+            let txs = [];
+            let totalMg = 0; 
 
-            // Ledger
-            let resLedger = await fetch(`${DB_URL}public_ledger.json?orderBy="$key"&limitToLast=50`);
-            let data = await resLedger.json();
-            if(!data) { document.getElementById('ledgerList').innerHTML = '<div style="padding:50px; text-align:center;">Data kosong.</div>'; return; }
+            if(data) {
+                for(let k in data) {
+                    data[k].txId = k;
+                    txs.push(data[k]);
+                }
+                txs.sort((a,b) => (b.timestamp || b.time) - (a.timestamp || a.time));
+            }
 
-            let logs = Object.values(data).sort((a,b) => b.timestamp - a.timestamp);
-            let html = logs.map(log => {
-                let dateObj = new Date(log.timestamp);
-                let t = getNusaTime(dateObj);
-                let d = getNusaDate(dateObj);
+            let html = "";
+            let totalSupplyMg = 0;
+            
+            // --- DAILY COUNTERS VAR ---
+            let today = new Date();
+            today.setHours(0,0,0,0);
+            let startOfDay = today.getTime();
+            
+            let dailyCount = 0;
+            let dailyTransfer = 0;
+            let dailyMint = 0;
+
+            txs.forEach(tx => {
+                let mg = parseInt(tx.val) || 0;
+                let txTime = tx.timestamp || tx.time || 0;
+
+                // --- LOGIC HARIAN (DAILY RESET) ---
+                if(txTime >= startOfDay) {
+                    dailyCount++;
+                    if (tx.type === 'MINT' || tx.type === 'ISSUED') dailyMint++;
+                    else if (tx.type === 'P2P' || tx.type === 'TRANSFER' || !tx.type) dailyTransfer++; // Asumsi default transfer
+                }
                 
-                // Format Ringkas di List
-                let dispDate = `${d.dayName}, ${d.date} ${d.month} ${d.year} (${d.pasaran})`;
-                let dispTime = `${t.str} ${t.period}`;
-
-                let isMint = log.type === 'MINT';
-                let isBurn = log.type === 'BURN';
-                let typeBadge, valClass, valStr, senderHtml = "";
-
-                if (isMint) {
-                    typeBadge = `<span class="badge type-mint">CETAK</span>`; valClass = 'val-plus'; valStr = `+ ${log.label}`;
-                    senderHtml = `<span class="sender-info">Oleh: BANK SENTRAL</span>`;
-                } else if (isBurn) {
-                    typeBadge = `<span class="badge type-burn">LEBUR</span>`; valClass = 'val-min'; 
-                    valStr = log.label; if(!valStr.includes("-")) valStr = "- " + valStr;
-                    senderHtml = `<span class="sender-info">Ke: BANK SENTRAL</span>`;
-                } else {
-                    typeBadge = `<span class="badge type-transfer">KIRIM</span>`; valClass = 'val-neutral'; valStr = `> ${log.label}`;
-                    let sender = log.sender || "ANONIM"; senderHtml = `<span class="sender-info">Dari: ${sender}</span>`;
+                // --- LOGIC COLOR CODING & SUPPLY GLOBAL ---
+                let badgeClass = "bg-trf"; 
+                let badgeLabel = "TRANSFER";
+                
+                if (tx.type === 'MINT' || tx.type === 'ISSUED') {
+                    badgeClass = "bg-mint"; 
+                    badgeLabel = "PENCETAKAN";
+                    totalSupplyMg += mg;
+                } 
+                else if (tx.type === 'CASH_OUT' || tx.type === 'BURN') {
+                    badgeClass = "bg-burn"; 
+                    badgeLabel = "HANGUS";
+                    totalSupplyMg -= mg;
+                } 
+                else {
+                    badgeClass = "bg-trf"; 
+                    badgeLabel = "TRANSFER";
                 }
 
-                return `
-                    <div class="tx-row">
-                        <div class="time-box"><span class="time-main">${dispDate}</span><span class="time-sub">${dispTime}</span></div>
-                        <div>${typeBadge}${senderHtml}</div>
-                        <div class="${valClass}">${valStr}</div>
-                        <div class="tx-id" onclick="copy('${log.tx_id}')" title="Copy">#${log.tx_id.substring(0, 8)}...</div>
-                    </div>`;
-            }).join('');
-            document.getElementById('ledgerList').innerHTML = html;
-        } catch(e) {}
+                let timeData = formatSunda(txTime || Date.now());
+                
+                // Formatter Nilai
+                let valStr = "";
+                let colorVal = "";
+                if(mg >= 80460) {
+                    valStr = (mg / 80460).toFixed(2) + " Dn";
+                    colorVal = "#f1c40f";
+                } else {
+                    valStr = (mg / 2980).toFixed(2) + " Dr";
+                    colorVal = "#bdc3c7";
+                }
+
+                let from = tx.from ? tx.from.replace("WARGA-", "") : (tx.issuer ? "BANK" : "SYSTEM");
+                let to = tx.to ? tx.to.replace("WARGA-", "") : "SYSTEM";
+                let txDisplay = tx.tx_id || tx.txId || "";
+
+                html += `
+                <tr>
+                    <td>
+                        <span class="time-sunda">${timeData.sunda}</span>
+                        <span class="time-wib">${timeData.jam}</span>
+                        <span class="time-greg">${timeData.greg}</span>
+                    </td>
+                    <td style="vertical-align:middle;">
+                        <span class="badge ${badgeClass}">${badgeLabel}</span>
+                    </td>
+                    <td>
+                        <div style="font-size:0.75rem; color:#aaa;">
+                            <span style="color:#666;">Dari:</span> ${from}<br>
+                            <span style="color:#666;">Ke&nbsp;&nbsp;:</span> ${to}
+                        </div>
+                        <span class="tx-id">Ref: ${txDisplay.substring(0,8)}...</span>
+                    </td>
+                    <td style="text-align:right; vertical-align:middle;">
+                        <span class="tx-val" style="color:${colorVal}">${valStr}</span>
+                    </td>
+                </tr>
+                `;
+            });
+
+            if(txs.length === 0) html = '<tr><td colspan="4" style="text-align:center; padding:30px; color:#555;">Belum ada prasasti transaksi.</td></tr>';
+
+            tbody.innerHTML = html;
+
+            // --- UPDATE SIRKULASI GLOBAL ---
+            if(totalSupplyMg <= 0 && txs.length > 0) {
+                 txs.forEach(t => totalSupplyMg += (parseInt(t.val)||0));
+            }
+            let totalDinar = totalSupplyMg / MG_PER_DINAR;
+            let totalDirham = totalSupplyMg / MG_PER_DIRHAM;
+            
+            document.getElementById('circDinar').innerText = totalDinar.toFixed(2) + " Dn";
+            document.getElementById('circDirham').innerText = totalDirham.toFixed(2) + " Dr";
+            document.getElementById('eqGold').innerText = `Eq: ${(totalDinar * 4.25).toFixed(2)}g Au`;
+            document.getElementById('eqSilver').innerText = `Eq: ${(totalDirham * 2.975).toFixed(2)}g Ag`;
+
+            // --- UPDATE STATISTIK HARIAN ---
+            let dailyEl = document.getElementById('dailyTotalDisplay');
+            dailyEl.innerText = `${dailyCount} / ${DAILY_LIMIT}`;
+            
+            // Color Logic Limit
+            dailyEl.className = "mini-val"; // Reset class
+            if(dailyCount >= DAILY_LIMIT) dailyEl.classList.add("limit-over");
+            else if(dailyCount >= (DAILY_LIMIT * 0.8)) dailyEl.classList.add("limit-warn");
+            else dailyEl.classList.add("limit-ok");
+
+            document.getElementById('dailyTrfCount').innerText = dailyTransfer;
+            document.getElementById('dailyMintCount').innerText = dailyMint;
+
+        } catch(e) {
+            tbody.innerHTML = `<tr><td colspan="4" style="color:#e74c3c; text-align:center; padding:20px;">Gagal koneksi: ${e}</td></tr>`;
+        }
     }
-    function copy(t) { navigator.clipboard.writeText(t); alert("ID Disalin!"); }
-    setInterval(fetchAllData, 3000); fetchAllData();
+
+    loadLedger();
+    setInterval(loadLedger, 30000); // Auto refresh 30s
 </script>
 
 </body>
