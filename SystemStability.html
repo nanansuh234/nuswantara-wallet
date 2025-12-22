@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nuswantara Economic Command Center v8.0</title>
+    <style>
+        :root { 
+            --bg: #050505; --card: #111; --border: #333; 
+            --gold: #f1c40f; --blue: #3498db; --green: #2ecc71; 
+            --red: #e74c3c; --purple: #9b59b6; --orange: #e67e22;
+        }
+        body { background-color: var(--bg); color: #e0e0e0; font-family: 'Segoe UI', monospace; margin: 0; padding: 20px; }
+        .container { max-width: 1100px; margin: 0 auto; border: 1px solid var(--border); border-radius: 15px; padding: 20px; box-shadow: 0 0 60px rgba(0,0,0,0.9); background: #0b0b0b; }
+        
+        /* HEADER */
+        .header { text-align: center; border-bottom: 2px solid var(--gold); padding-bottom: 15px; margin-bottom: 25px; }
+        .title { font-size: 1.8rem; color: var(--gold); font-weight: bold; letter-spacing: 3px; text-transform: uppercase; }
+        .subtitle { font-size: 0.75rem; color: #888; letter-spacing: 1px; margin-top: 5px; }
+        
+        /* GRID LAYOUTS */
+        .dashboard-top { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
+        .dashboard-mid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px; }
+        .main-split { display: grid; grid-template-columns: 1.6fr 1fr; gap: 20px; }
+
+        /* CARD STYLES */
+        .card { background: #141414; border: 1px solid #222; padding: 15px; text-align: center; border-radius: 10px; position: relative; overflow: hidden; transition: 0.3s; }
+        .card:hover { border-color: #444; transform: translateY(-2px); }
+        .card::before { content: ''; position: absolute; top:0; left:0; width: 100%; height: 3px; background: #333; }
+        
+        /* Color Lines */
+        .c-gold::before { background: var(--gold); }
+        .c-blue::before { background: var(--blue); }
+        .c-green::before { background: var(--green); }
+        .c-red::before { background: var(--red); }
+        .c-purple::before { background: var(--purple); }
+        .c-orange::before { background: var(--orange); }
+
+        .lbl { font-size: 0.6rem; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+        .val { font-size: 1.3rem; font-weight: bold; color: #fff; }
+        .sub { font-size: 0.55rem; color: #666; margin-top: 5px; font-style: italic; }
+
+        /* SPECIAL METERS */
+        .meter-box { background: #1a1a1a; height: 6px; width: 100%; border-radius: 3px; margin-top: 8px; overflow: hidden; position: relative; }
+        .meter-fill { height: 100%; width: 0%; transition: 1s cubic-bezier(0.4, 0, 0.2, 1); }
+        
+        /* GINI BAR (GRADIENT) */
+        .gini-track { width: 100%; height: 8px; background: linear-gradient(90deg, #2ecc71 0%, #f39c12 40%, #e74c3c 100%); border-radius: 4px; margin-top: 10px; position: relative; }
+        .gini-marker { position: absolute; top: -4px; width: 4px; height: 16px; background: #fff; border: 1px solid #000; box-shadow: 0 0 5px white; transition: 1s; }
+
+        /* TABLES */
+        .box { border: 1px solid #222; background: #000; border-radius: 10px; overflow: hidden; }
+        .box-header { background: #1a1a1a; padding: 12px; font-size: 0.75rem; font-weight: bold; color: #aaa; border-bottom: 1px solid #333; display: flex; justify-content: space-between; }
+        
+        table { width: 100%; border-collapse: collapse; font-size: 0.7rem; }
+        td, th { padding: 10px; text-align: left; border-bottom: 1px solid #111; }
+        th { color: #555; font-weight: normal; text-transform: uppercase; }
+        .num { text-align: right; font-family: monospace; color: var(--gold); font-weight: bold; }
+        
+        /* FOOTER */
+        .philosophy { margin-top: 30px; border-top: 1px dashed #333; padding: 20px; font-size: 0.75rem; color: #777; line-height: 1.6; text-align: center; background: #0f0f0f; border-radius: 10px; }
+        .hl { color: var(--gold); font-weight: bold; }
+
+        .refresh-btn { position: fixed; bottom: 30px; right: 30px; background: var(--gold); color: #000; border: none; width: 50px; height: 50px; border-radius: 50%; font-weight: bold; cursor: pointer; box-shadow: 0 0 20px rgba(241, 196, 15, 0.4); z-index: 100; font-size: 1.5rem; transition: 0.2s; }
+        .refresh-btn:active { transform: scale(0.9); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <div class="title">NUSWANTARA COMMAND CENTER</div>
+        <div class="subtitle">SYSTEM STABILITY SETTLEMENT • TRANSPARANSI TOTAL • KEADILAN SOSIAL</div>
+    </div>
+
+    <div class="dashboard-top">
+        <div class="card c-gold">
+            <div class="lbl">Total Supply</div>
+            <div id="dispSupply" class="val" style="color:var(--gold);">0.00 Dr</div>
+            <div class="sub">Total Aset (Digital + Fisik)</div>
+        </div>
+        
+        <div class="card c-orange">
+            <div class="lbl">Suhu Ekonomi (Velocity)</div>
+            <div id="dispTemp" class="val">Stabil</div>
+            <div class="meter-box"><div id="barTemp" class="meter-fill" style="background:var(--green);"></div></div>
+            <div class="sub">Kecepatan Perputaran Uang</div>
+        </div>
+
+        <div class="card c-blue">
+            <div class="lbl">Daya Beli (Inflation)</div>
+            <div id="dispPower" class="val">100%</div>
+            <div class="sub">Indeks Kestabilan Harga</div>
+        </div>
+
+        <div class="card c-green">
+            <div class="lbl">Partisipan Aktif</div>
+            <div id="dispPop" class="val">0</div>
+            <div class="sub">Wallet & Bank Terdaftar</div>
+        </div>
+    </div>
+
+    <div class="dashboard-mid">
+        <div class="card c-red">
+            <div class="lbl">Indeks Ketimpangan (Gini)</div>
+            <div id="dispGini" class="val">0.000</div>
+            <div class="gini-track"><div id="markerGini" class="gini-marker" style="left:0%;"></div></div>
+            <div style="display:flex; justify-content:space-between; font-size:0.5rem; margin-top:4px; color:#555;">
+                <span>Adil (0.2)</span><span>Waspada (0.4)</span><span>Bahaya (0.6)</span>
+            </div>
+        </div>
+
+        <div class="card c-purple">
+            <div class="lbl">Nilai Keringat (Labor Value)</div>
+            <div id="dispLabor" class="val" style="color:var(--purple);">0 Jam</div>
+            <div class="sub">Total Saldo setara Jam Kerja Manusia</div>
+        </div>
+
+        <div class="card c-blue">
+            <div class="lbl">Dominasi Whales</div>
+            <div id="dispConc" class="val">0%</div>
+            <div class="meter-box"><div id="barConc" class="meter-fill" style="background:var(--blue);"></div></div>
+            <div class="sub">Kekayaan dikuasai Top 10 Holder</div>
+        </div>
+    </div>
+
+    <div class="main-split">
+        <div class="box">
+            <div class="box-header">
+                <span>🏆 DISTRIBUSI KEKAYAAN (TOP 10)</span>
+                <span id="statusConn" style="color:var(--green);">Live</span>
+            </div>
+            <div style="height: 320px; overflow-y: auto;">
+                <table id="tableHolders">
+                    <thead><tr><th width="10%">#</th><th>ID Wallet / Institusi</th><th class="num">Saldo (Dr)</th><th class="num">%</th></tr></thead>
+                    <tbody id="tbodyHolders">
+                        <tr><td colspan="4" style="text-align:center; padding:20px; color:#555;">Memuat Data...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="box">
+            <div class="box-header">
+                <span>🏦 CADANGAN & FISIK</span>
+            </div>
+            <div style="padding: 20px;">
+                
+                <div style="margin-bottom: 25px;">
+                    <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:#aaa; margin-bottom:5px;">
+                        <span>CADANGAN BANK</span>
+                        <span id="txtBank" style="color:var(--gold); font-weight:bold;">0 Dr</span>
+                    </div>
+                    <div class="meter-box" style="background:#222;"><div id="barBank" class="meter-fill" style="background:var(--gold);"></div></div>
+                    <div class="sub" style="text-align:right;">Rasio vs Beredar</div>
+                </div>
+
+                <div style="margin-bottom: 25px;">
+                    <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:#aaa; margin-bottom:5px;">
+                        <span>UANG FISIK (QR BEREDAR)</span>
+                        <span id="txtPhys" style="color:var(--orange); font-weight:bold;">0 Dr</span>
+                    </div>
+                    <div class="meter-box" style="background:#222;"><div id="barPhys" class="meter-fill" style="background:var(--orange);"></div></div>
+                    <div class="sub" style="text-align:right;">Dicetak tapi belum diklaim</div>
+                </div>
+
+                <div style="border: 1px solid #333; padding: 15px; border-radius: 8px; background: #111; text-align:center;">
+                    <div style="font-size:0.6rem; color:#888;">STATUS SISTEM</div>
+                    <div id="sysStatus" style="font-size:1.2rem; font-weight:bold; color:var(--green); margin:5px 0;">SEHAT</div>
+                    <div id="sysMsg" style="font-size:0.6rem; color:#666;">Tidak terdeteksi anomali.</div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="philosophy">
+        "Sistem ini dibangun di atas <strong>System Stability Settlement</strong>. Saldo yang Anda lihat bukan sekadar angka, melainkan <span class="hl">KESEPAKATAN NILAI</span> yang dijamin oleh aset fisik (Beras, Emas, Jasa) warga secara kolektif.<br><br>
+        Jika <strong>Indeks Gini tinggi</strong> atau <strong>Suhu Ekonomi Overheating</strong>, sistem memberi sinyal bahwa ada ketidakadilan atau potensi inflasi, sehingga komunitas bisa segera melakukan koreksi sebelum krisis terjadi."
+    </div>
+
+</div>
+
+<button onclick="refreshData()" class="refresh-btn">↻</button>
+
+<script>
+    const DB_URL = "https://pasarnuswantara-default-rtdb.asia-southeast1.firebasedatabase.app/";
+    const MG_PER_DIRHAM = 2980;
+    const WAGE_PER_HOUR_DR = 0.25; // Asumsi 1 Jam Kerja = 0.25 Dirham (8 Jam = 2 Dirham)
+
+    async function refreshData() {
+        document.getElementById('statusConn').innerText = "Syncing...";
+        
+        try {
+            // 1. DATA AGGREGATION
+            let [resLedger, resCensus, resBank] = await Promise.all([
+                fetch(`${DB_URL}public_ledger.json`).then(r => r.json()),
+                fetch(`${DB_URL}census_report.json`).then(r => r.json()),
+                fetch(`${DB_URL}bank_reserve.json`).then(r => r.json().catch(() => null))
+            ]);
+
+            let holders = [];
+            let totalWalletMg = 0;
+            let bankTotalMg = 0;
+            let wealthArray = []; 
+
+            // Process Census (Citizens)
+            if (resCensus) {
+                for (let key in resCensus) {
+                    let u = resCensus[key];
+                    let bal = parseInt(u.balance_mg) || 0;
+                    totalWalletMg += bal;
+                    holders.push({ id: u.name || key, val: bal, type: 'USER' });
+                    if(bal > 0) wealthArray.push(bal); // For Gini
+                }
+            }
+
+            // Process Bank
+            if (resBank) {
+                bankTotalMg = parseInt(resBank.balance_mg) || 0;
+                totalWalletMg += bankTotalMg;
+                holders.push({ id: "BANK_CENTRAL", val: bankTotalMg, type: 'BANK' });
+            }
+
+            // Process Ledger (Velocity & Physical)
+            let velocityMg = 0;
+            let physicalFloatMg = 0;
+            if(resLedger) {
+                for(let k in resLedger) {
+                    let tx = resLedger[k];
+                    let mg = Math.abs(Number(tx.val) || 0);
+                    velocityMg += mg; 
+                    
+                    if (tx.type === 'CASH_OUT') physicalFloatMg += mg;
+                    if (tx.type === 'CLAIM_QR' || tx.type === 'INBOX_CLAIM') physicalFloatMg -= mg;
+                }
+            }
+            if (physicalFloatMg < 0) physicalFloatMg = 0;
+            let totalSystemMg = totalWalletMg + physicalFloatMg;
+
+            // --- CALCULATIONS ---
+
+            // 1. Supply & Pop
+            let totalDr = totalSystemMg / MG_PER_DIRHAM;
+            let pop = holders.filter(x => x.type === 'USER').length;
+
+            // 2. Velocity Ratio (Turnover)
+            let velRatio = (totalSystemMg > 0) ? (velocityMg / totalSystemMg) : 0;
+
+            // 3. Gini Coefficient
+            let gini = 0;
+            if (wealthArray.length > 1) {
+                wealthArray.sort((a, b) => a - b);
+                let n = wealthArray.length;
+                let sum = wealthArray.reduce((a, b) => a + b, 0);
+                let num = 0;
+                for (let i = 0; i < n; i++) num += (i + 1) * wealthArray[i];
+                gini = (2 * num) / (n * sum) - (n + 1) / n;
+            }
+            if (gini < 0) gini = 0;
+
+            // 4. Labor Value
+            let laborHours = totalDr / WAGE_PER_HOUR_DR;
+
+            // 5. Whales Concentration
+            holders.sort((a, b) => b.val - a.val);
+            let top10 = holders.slice(0, 10);
+            let top10Sum = top10.reduce((a, b) => a + b.val, 0);
+            let concPct = (totalSystemMg > 0) ? (top10Sum / totalSystemMg) * 100 : 0;
+
+            // --- UI UPDATES ---
+
+            // Top Row
+            document.getElementById('dispSupply').innerText = totalDr.toLocaleString('en-US', {maximumFractionDigits:0}) + " Dr";
+            document.getElementById('dispPop').innerText = pop;
+            
+            // Temperature Logic
+            let tempEl = document.getElementById('dispTemp');
+            let barTemp = document.getElementById('barTemp');
+            if(velRatio > 10) {
+                tempEl.innerText = "OVERHEATING!"; tempEl.style.color = "var(--red)";
+                barTemp.style.width = "100%"; barTemp.style.background = "var(--red)";
+            } else if (velRatio > 4) {
+                tempEl.innerText = "AKTIF TINGGI"; tempEl.style.color = "var(--orange)";
+                barTemp.style.width = "75%"; barTemp.style.background = "var(--orange)";
+            } else {
+                tempEl.innerText = "STABIL"; tempEl.style.color = "var(--green)";
+                barTemp.style.width = "30%"; barTemp.style.background = "var(--green)";
+            }
+
+            // Gini Logic
+            document.getElementById('dispGini').innerText = gini.toFixed(3);
+            let giniPct = gini * 100;
+            document.getElementById('markerGini').style.left = giniPct + "%";
+
+            // Labor & Concentration
+            document.getElementById('dispLabor').innerText = Math.floor(laborHours).toLocaleString() + " Jam";
+            document.getElementById('dispConc').innerText = concPct.toFixed(1) + "%";
+            document.getElementById('barConc').style.width = concPct + "%";
+
+            // Right Panel (Bank & Phys)
+            let bankPct = (totalSystemMg > 0) ? (bankTotalMg / totalSystemMg) * 100 : 0;
+            let physPct = (totalSystemMg > 0) ? (physicalFloatMg / totalSystemMg) * 100 : 0;
+            
+            document.getElementById('txtBank').innerText = (bankTotalMg / MG_PER_DIRHAM).toFixed(0) + " Dr (" + bankPct.toFixed(1) + "%)";
+            document.getElementById('barBank').style.width = bankPct + "%";
+            
+            document.getElementById('txtPhys').innerText = (physicalFloatMg / MG_PER_DIRHAM).toFixed(0) + " Dr (" + physPct.toFixed(1) + "%)";
+            document.getElementById('barPhys').style.width = physPct + "%";
+
+            // Table Render
+            let html = "";
+            top10.forEach((u, i) => {
+                let d = (u.val / MG_PER_DIRHAM).toFixed(2);
+                let pct = (totalSystemMg > 0) ? (u.val / totalSystemMg * 100).toFixed(1) : 0;
+                let color = u.type === 'BANK' ? 'var(--gold)' : (u.type === 'USER' ? '#ccc' : 'var(--blue)');
+                
+                html += `<tr>
+                    <td><span class="rank-badge">${i+1}</span></td>
+                    <td style="color:${color}; font-family:monospace;">${u.id}</td>
+                    <td class="num">${Number(d).toLocaleString()}</td>
+                    <td class="num" style="color:#777;">${pct}%</td>
+                </tr>`;
+            });
+            document.getElementById('tbodyHolders').innerHTML = html;
+
+            // System Diagnosis
+            let sysStatus = document.getElementById('sysStatus');
+            let sysMsg = document.getElementById('sysMsg');
+            
+            if(gini > 0.5) {
+                sysStatus.innerText = "WARNING: OLIGARKI"; sysStatus.style.color = "var(--red)";
+                sysMsg.innerText = "Distribusi kekayaan sangat timpang. Perlu intervensi.";
+            } else if (velRatio > 12) {
+                sysStatus.innerText = "WARNING: INFLASI"; sysStatus.style.color = "var(--red)";
+                sysMsg.innerText = "Perputaran uang terlalu cepat vs Supply.";
+            } else {
+                sysStatus.innerText = "SEHAT / STABIL"; sysStatus.style.color = "var(--green)";
+                sysMsg.innerText = "Ekosistem berjalan dalam parameter wajar.";
+            }
+
+            document.getElementById('statusConn').innerText = "Live";
+
+        } catch (e) {
+            console.error(e);
+            document.getElementById('statusConn').innerText = "Error";
+        }
+    }
+
+    refreshData();
+    setInterval(refreshData, 5000);
+</script>
+
+</body>
+</html>
