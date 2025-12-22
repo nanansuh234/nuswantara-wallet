@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nuswantara Economic Monitor v5.2</title>
+    <title>Nuswantara Economic Monitor v5.3 (Fix Logic)</title>
     <style>
         :root { --neon: #d4af37; --bg: #050505; --card: #111; --border: #333; }
         body { background-color: var(--bg); color: #e0e0e0; font-family: 'Segoe UI', monospace; margin: 0; padding: 20px; }
@@ -59,6 +59,8 @@
         .bg-mint { background: rgba(46, 204, 113, 0.1); color: #2ecc71; border-color: #2ecc71; }
         .bg-trf { background: rgba(52, 152, 219, 0.1); color: #3498db; border-color: #3498db; }
         .bg-burn { background: rgba(231, 76, 60, 0.1); color: #e74c3c; border-color: #e74c3c; }
+        .bg-phys { background: rgba(243, 156, 18, 0.1); color: #f39c12; border-color: #f39c12; }
+        
         .tx-val { font-weight: bold; font-size: 0.85rem; font-family: monospace; }
         .tx-ref { font-family: monospace; font-size: 0.55rem; color: #555; display: block; letter-spacing: 0.5px; }
         
@@ -89,7 +91,7 @@
         <h1>MONITOR EKONOMI NUSWANTARA</h1>
         <div class="live-status">
             <span class="blink-dot"></span>
-            <span class="status-text">LIVE SYNC</span>
+            <span class="status-text">LIVE SYNC (3s)</span>
         </div>
     </div>
     
@@ -98,12 +100,12 @@
         <div class="card">
             <div class="card-title">Stok Emas (Dinar)</div>
             <div id="circDinar" class="card-val gold">0.00 Dn</div>
-            <div class="card-note">Total Cetak - Total Hangus</div>
+            <div class="card-note">Digital + Token Fisik</div>
         </div>
         <div class="card">
             <div class="card-title">Stok Perak (Dirham)</div>
             <div id="circDirham" class="card-val silver">0.00 Dr</div>
-            <div class="card-note">Total Cetak - Total Hangus</div>
+            <div class="card-note">Digital + Token Fisik</div>
         </div>
     </div>
 
@@ -131,7 +133,7 @@
             <div id="dailyTrfCount" class="mini-val" style="color:#fff;">0</div>
         </div>
         <div class="mini-card" style="border-bottom: 2px solid #2ecc71;">
-            <div class="mini-label" style="color:#2ecc71;">CETAK</div>
+            <div class="mini-label" style="color:#2ecc71;">CETAK / FISIK</div>
             <div id="dailyMintCount" class="mini-val" style="color:#fff;">0</div>
         </div>
     </div>
@@ -283,24 +285,33 @@
                 // --- 1. VELOCITY CALC (MUTLAK) ---
                 velocityMg += mg; 
 
-                // --- 2. SUPPLY CALC (ARUS KELUAR MASUK) ---
+                // --- 2. SUPPLY CALC (LOGIC DIPERBAIKI) ---
                 let badgeClass="bg-trf", badgeLabel="TRANSFER";
                 let rawFrom = tx.from || tx.issuer || "SYSTEM";
                 let rawTo = tx.to || "SYSTEM";
 
                 if (tx.type === 'MINT' || tx.type === 'ISSUED') {
-                    badgeClass="bg-mint"; badgeLabel="CETAK"; supplyMg += mg; rawFrom="SYSTEM";
-                } else if (tx.type === 'CASH_OUT' || tx.type === 'BURN') {
+                    // Cetak Baru (Tambah Supply)
+                    badgeClass="bg-mint"; badgeLabel="CETAK BARU"; supplyMg += mg; rawFrom="SYSTEM";
+                } else if (tx.type === 'BURN') {
+                    // Hangus (Kurang Supply)
                     badgeClass="bg-burn"; badgeLabel="HANGUS"; supplyMg -= mg; rawTo="SYSTEM";
+                } else if (tx.type === 'CASH_OUT') {
+                    // PERBAIKAN: Cash Out = Jadi Fisik (Supply Tetap Ada, cuma pindah wujud)
+                    badgeClass="bg-phys"; badgeLabel="KE FISIK"; 
+                    // Jangan kurangi supplyMg! Uangnya masih ada di tangan user dalam bentuk QR.
+                } else if (tx.type === 'CLAIM_QR' || tx.type === 'INBOX_CLAIM') {
+                    // Claim balik ke Wallet (Supply Tetap)
+                    badgeClass="bg-phys"; badgeLabel="DARI FISIK";
                 } else {
-                    badgeClass="bg-trf"; badgeLabel="KIRIM";
+                    badgeClass="bg-trf"; badgeLabel="TRANSFER";
                 }
 
                 // Daily Limit
                 if(t >= startLimitTime) {
                     dCount++;
-                    if(tx.type === 'MINT'||tx.type==='ISSUED') dMint++;
-                    else if(tx.type === 'P2P'||!tx.type) dTrf++;
+                    if(tx.type === 'MINT'||tx.type==='ISSUED'||tx.type==='CASH_OUT') dMint++;
+                    else dTrf++;
                 }
 
                 let cal = getNusaCalendar(t);
@@ -351,7 +362,7 @@
     }
 
     loadLedger();
-    setInterval(loadLedger, 30000);
+    setInterval(loadLedger, 3000); // REFRESH CEPAT 3 DETIK
 </script>
 
 </body>
