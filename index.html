@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nuswantara Wallet v22.4 (Fixed)</title>
+    <title>Nuswantara Wallet v22.5 (Offline First)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        body { background-color: #0a0a0a; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; font-family: 'Segoe UI', monospace; }
+        body { background-color: #050505; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; font-family: 'Segoe UI', monospace; color:white; }
         .btn-action { cursor: pointer; transition: 0.2s; }
         .btn-action:active { transform: scale(0.95); }
         .file-btn { background: #333; color: #aaa; border: 1px dashed #555; padding: 10px; width: 100%; border-radius: 10px; margin-top: 10px; cursor: pointer; font-size: 0.8rem; display:block; box-sizing:border-box; text-align:center;}
@@ -30,7 +30,7 @@
 </head>
 <body>
 
-<div id="walletApp" style="border: 4px solid #f39c12; background: #050505; border-radius: 25px; padding: 25px; color: #fff; width: 100%; max-width: 500px; box-shadow: 0 0 60px rgba(243, 156, 18, 0.15); position:relative;">
+<div id="walletApp" style="border: 4px solid #f39c12; background: #000; border-radius: 25px; padding: 25px; width: 100%; max-width: 500px; box-shadow: 0 0 60px rgba(243, 156, 18, 0.15); position:relative;">
     
     <div id="lockScreen" style="display:none; text-align: center; padding: 20px;">
         <div style="font-size: 3.5rem; margin-bottom: 10px;">🛡️</div>
@@ -57,7 +57,7 @@
     <div id="walletPanel" style="display:none;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
             <div style="text-align:left;">
-                <span style="font-size: 0.65rem; color: #f39c12; letter-spacing: 1px; font-weight: bold;">NUSWANTARA v22.4</span><br>
+                <span style="font-size: 0.65rem; color: #f39c12; letter-spacing: 1px; font-weight: bold;">NUSWANTARA v22.5</span><br>
                 <div style="display:flex; align-items:center;">
                     <div id="myIDDisplay" class="id-badge">ID: ...</div>
                     <button onclick="forceReport()" class="btn-report">📡 LAPOR</button>
@@ -67,8 +67,8 @@
         </div>
         
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-            <div id="syncStatus" class="sync-status">Siap Sinkronisasi</div>
-            <button onclick="fullRecovery()" style="background:none; border:1px solid #333; color:#2980b9; font-size:0.55rem; padding:3px 8px; border-radius:5px; cursor:pointer;">🔄 SMART SYNC</button>
+            <div id="syncStatus" class="sync-status">Offline Ready</div>
+            <button onclick="fullRecovery()" style="background:none; border:1px solid #333; color:#2980b9; font-size:0.55rem; padding:3px 8px; border-radius:5px; cursor:pointer;">🔄 SYNC CLOUD</button>
         </div>
 
         <div style="background:#111; padding:20px; border-radius:20px; border: 1px solid #222; margin-bottom: 20px;">
@@ -138,7 +138,7 @@
         <div style="border-top: 1px solid #222; padding-top:15px; margin-top: 20px;">
             <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px;">
                 <label style="font-size: 0.6rem; color: #444; text-transform: uppercase;">Riwayat Transaksi:</label>
-                <button onclick="clearHistory()" style="background:none; border:none; color:#e74c3c; font-size:0.5rem; cursor:pointer; text-decoration:underline;">Reset Cache</button>
+                <button onclick="clearHistory()" style="background:none; border:none; color:#e74c3c; font-size:0.5rem; cursor:pointer; text-decoration:underline;">Reset Local Data</button>
             </div>
             <div id="historyLog" style="height:150px; overflow-y:auto; font-size:0.65rem; background:#000; border-radius:12px; padding:12px;"></div>
         </div>
@@ -194,7 +194,7 @@ let savedTxPin = localStorage.getItem('nw_tx_pin') || "";
 let totalMg = 0; 
 let history = [];
 
-// Load history dengan aman
+// 1. LOAD LOCAL STORAGE DULUAN (PRIORITAS UTAMA)
 try {
     let rawHist = localStorage.getItem('nw_hist');
     history = rawHist ? JSON.parse(rawHist) : [];
@@ -211,7 +211,10 @@ if (savedKey && !myID) {
     localStorage.setItem('nw_name', myID);
 }
 
-// Cek Login State
+// Hitung saldo langsung saat script dimuat
+recalcBalance();
+
+// Tentukan Tampilan Login atau App
 if(savedKey === "") {
     document.getElementById('lockScreen').style.display = "block";
     document.getElementById('lockTitle').innerText = "SETUP WALLET BARU";
@@ -224,7 +227,111 @@ if(savedKey === "") {
     document.getElementById('lockTitle').innerText = "LOGIN WALLET";
 }
 
-// --- FUNGSI SECURITY & LOGIN ---
+// --- LOGIC SALDO ANTI-RESET ---
+function recalcBalance() {
+    let calc = 0;
+    
+    // Bersihkan data yang corrupt/null
+    if(!Array.isArray(history)) history = [];
+    history = history.filter(h => h && h.val !== undefined && h.val !== null);
+
+    history.forEach(h => {
+        // Paksa semua nilai jadi Number agar tidak dibaca sebagai teks
+        let val = Number(h.val);
+        if (isNaN(val)) val = 0;
+
+        if(h.flow === 'IN') {
+            calc += val;
+        } else if(h.flow === 'OUT') {
+            calc -= val;
+        }
+    });
+
+    if(calc < 0) calc = 0;
+    totalMg = calc;
+    
+    // Simpan hitungan terbaru ke Local
+    localStorage.setItem('nw_mg', totalMg);
+    localStorage.setItem('nw_hist', JSON.stringify(history));
+    
+    // Update Tampilan
+    updateUI();
+}
+
+// --- SMART SYNC (MERGE ONLY) ---
+// Logic: Ambil data cloud, kalau ada transaksi baru, tambahkan ke lokal. 
+// Kalau cloud error/kosong, biarkan lokal apa adanya.
+async function fullRecovery() {
+    if(!myID) return;
+    let statusEl = document.getElementById('syncStatus');
+    statusEl.innerHTML = '<span class="pulse">⏳ Cek Cloud...</span>';
+    statusEl.style.color = "#f39c12";
+
+    try {
+        checkInbox(); // Cek inbox dulu
+
+        let res = await fetch(`${DB_URL}public_ledger.json`);
+        
+        // Kalau fetch gagal (offline), dia akan lempar error ke catch(). Data aman.
+        let ledger = await res.json();
+        
+        // Kalau database kosong, jangan hapus data lokal!
+        if (!ledger) {
+            statusEl.innerHTML = "⚠️ Cloud Kosong (Lokal Aktif)";
+            statusEl.style.color = "#888";
+            return; 
+        }
+
+        let incomingHistory = [];
+        let existingIds = new Set(history.map(h => h.txId)); // Catat ID yang udah ada di lokal
+
+        for (let key in ledger) {
+            let tx = ledger[key];
+            let isMine = false, flow = "";
+            
+            if (tx.to === myID) { isMine = true; flow = "IN"; }
+            else if (tx.from === myID || tx.sender === myID) { isMine = true; flow = "OUT"; }
+
+            if(isMine) {
+                let txId = tx.tx_id || key;
+                
+                // HANYA TAMBAHKAN JIKA DI LOKAL BELUM ADA
+                if(!existingIds.has(txId)) {
+                    incomingHistory.push({
+                        flow: flow,
+                        t: flow === "IN" ? "MASUK (SYNC)" : "KELUAR (SYNC)",
+                        label: (Number(tx.val)/MG_PER_DIRHAM).toFixed(2) + " Dr",
+                        val: Number(tx.val),
+                        time: new Date(tx.timestamp || tx.time).toLocaleTimeString(),
+                        raw: key,
+                        txId: txId
+                    });
+                    existingIds.add(txId); 
+                }
+            }
+        }
+
+        // Gabungkan: Data Baru + Data Lama
+        if (incomingHistory.length > 0) {
+            history = [...incomingHistory.reverse(), ...history];
+            recalcBalance(); 
+            statusEl.innerHTML = "✅ Data Tergabung";
+            statusEl.style.color = "#2ecc71";
+            alert(`SINKRONISASI: ${incomingHistory.length} Transaksi baru disalin ke HP.`);
+        } else {
+            statusEl.innerHTML = "✅ Data Up-to-Date";
+            statusEl.style.color = "#2ecc71";
+        }
+
+    } catch(e) {
+        console.log("Offline mode:", e);
+        statusEl.innerHTML = "⚠️ Mode Offline (Aman)";
+        statusEl.style.color = "#e74c3c";
+        // GAK ADA CODE YANG MENGHAPUS HISTORY DISINI. AMAN.
+    }
+}
+
+// --- FUNGSI LAINNYA ---
 function validatePassword(pass) {
     const strongRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{6,}$/;
     return strongRegex.test(pass);
@@ -253,9 +360,8 @@ function unlockWallet() {
             document.getElementById('walletPanel').style.display = "block";
             if(!savedTxPin) document.getElementById('setupPinModal').style.display = 'flex';
             
-            // Panggil sync sekali saat login sukses
-            fullRecovery(); 
-            checkInbox();
+            // Coba sync, tapi kalau gagal tetep load data lokal
+            fullRecovery();
         } else {
             msg.innerText = "PASSWORD SALAH!";
             pInput.value = "";
@@ -272,96 +378,6 @@ function saveTxPin() {
     alert("PIN Tersimpan!");
 }
 
-// --- CORE RECOVERY SYSTEM (FIXED) ---
-async function fullRecovery() {
-    if(!myID) return;
-    let statusEl = document.getElementById('syncStatus');
-    statusEl.innerHTML = '<span class="pulse">⏳ Sinkronisasi Cloud...</span>';
-    statusEl.style.color = "#f39c12";
-
-    try {
-        // Cek Inbox juga saat tombol sync ditekan
-        checkInbox();
-
-        let res = await fetch(`${DB_URL}public_ledger.json`);
-        let ledger = await res.json();
-        
-        // Handle jika ledger kosong (null) agar tidak error
-        if (!ledger) ledger = {};
-
-        let cloudHistory = [];
-        let seenTxIds = new Set(); 
-
-        for (let key in ledger) {
-            let tx = ledger[key];
-            let isMine = false, flow = "";
-            
-            if (tx.to === myID) { isMine = true; flow = "IN"; }
-            else if (tx.from === myID || tx.sender === myID) { isMine = true; flow = "OUT"; }
-
-            if(isMine) {
-                let txId = tx.tx_id || key; 
-                if(!seenTxIds.has(txId)) {
-                    cloudHistory.push({
-                        flow: flow,
-                        t: flow === "IN" ? "MASUK (SYNC)" : "KELUAR (SYNC)",
-                        label: (Number(tx.val)/MG_PER_DIRHAM).toFixed(2) + " Dr",
-                        val: Number(tx.val), // Pastikan Number
-                        time: new Date(tx.timestamp || tx.time).toLocaleTimeString(),
-                        raw: key,
-                        txId: txId
-                    });
-                    seenTxIds.add(txId);
-                }
-            }
-        }
-
-        // Gabungkan data: Pertahankan data lokal yang BELUM ada di cloud (Pending)
-        let pendingLocal = history.filter(h => !seenTxIds.has(h.raw) && !seenTxIds.has(h.txId));
-        
-        // Update history utama
-        history = [...pendingLocal, ...cloudHistory.reverse()];
-        
-        recalcBalance();
-        statusEl.innerHTML = "✅ Sinkronisasi Stabil";
-        statusEl.style.color = "#2ecc71";
-        updateUI();
-
-    } catch(e) {
-        console.error(e);
-        statusEl.innerHTML = "⚠️ Offline Mode";
-        statusEl.style.color = "#888";
-    }
-}
-
-// --- PERBAIKAN MATEMATIKA SALDO ---
-function recalcBalance() {
-    let calc = 0; // Mulai dari integer murni
-    
-    // Filter history sampah (yang valuenya null/undefined)
-    history = history.filter(h => h && h.val != null);
-
-    history.forEach(h => {
-        // Pakai Number() untuk memaksa jadi angka, bukan string
-        let v = Number(h.val); 
-        if (isNaN(v)) v = 0;
-
-        if(h.flow === 'IN') {
-            calc += v;
-        } else if(h.flow === 'OUT') {
-            calc -= v;
-        }
-    });
-
-    // Cegah saldo negatif
-    if(calc < 0) calc = 0;
-    
-    totalMg = calc;
-    localStorage.setItem('nw_mg', totalMg);
-    localStorage.setItem('nw_hist', JSON.stringify(history));
-}
-
-// --- TRANSAKSI ---
 async function executeTransfer() {
     let dest = document.getElementById('trfDest').value.trim();
     let amtDr = parseFloat(document.getElementById('trfAmt').value);
@@ -381,16 +397,13 @@ async function executeTransfer() {
         const signature = createSig(tokenContent, savedKey);
         const token = "TOKEN-" + btoa(tokenContent + "|" + signature);
 
-        // 1. Kirim ke Inbox Penerima
         await fetch(`${DB_URL}inbox/${dest}.json`, { method: 'POST', body: JSON.stringify(token) });
-        
-        // 2. Catat di Ledger Publik
         await fetch(`${DB_URL}public_ledger/${nonce}.json`, { 
             method: 'PUT', 
             body: JSON.stringify({ type: 'P2P', from: myID, to: dest, val: amtMg, timestamp: Date.now(), tx_id: nonce }) 
         });
 
-        // 3. Update Lokal Langsung (Supaya kerasa cepet)
+        // Update Lokal Duluan (Biar kerasa cepet)
         history.unshift({ 
             flow: 'OUT', 
             t: 'KELUAR', 
@@ -402,8 +415,6 @@ async function executeTransfer() {
         });
         
         recalcBalance(); 
-        updateUI();
-        
         alert("✅ TRANSFER SUKSES!");
         document.getElementById('transferModal').style.display = 'none';
         document.getElementById('trfPin').value = "";
@@ -418,12 +429,10 @@ async function quickSend(mg, label) {
     const nonce = "W-" + Math.random().toString(36).substring(2, 7).toUpperCase();
     const token = "TOKEN-" + btoa(`${mg}:${Date.now()}:${nonce}` + "|" + createSig(`${mg}:${Date.now()}:${nonce}`, savedKey));
     
-    // Kirim ke cloud background
     fetch(`${DB_URL}public_ledger/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ type: 'CASH_OUT', from: myID, val: mg, timestamp: Date.now(), tx_id: nonce }) });
     
-    // Update lokal
     history.unshift({ flow: 'OUT', t: 'KELUAR', label: label, val: mg, raw: token, txId: nonce, time: new Date().toLocaleTimeString() });
-    recalcBalance(); updateUI();
+    recalcBalance();
     
     document.getElementById('qrResult').style.display = 'block'; 
     document.getElementById('qrcode').innerHTML = ""; 
@@ -431,7 +440,6 @@ async function quickSend(mg, label) {
     document.getElementById('textToken').innerText = token;
 }
 
-// --- CLAIM & INBOX ---
 async function execClaim() {
     let input = document.getElementById('tokenIn').value.replace("TOKEN-", "").trim();
     if(!input) return;
@@ -439,19 +447,16 @@ async function execClaim() {
         let decoded = atob(input);
         let [payload] = decoded.split("|");
         let parts = payload.split(":");
-        
-        // Validasi format token
         if(parts.length < 3) throw "Format Token Invalid";
 
-        let mg = Number(parts[0]); // Pastikan Number
+        let mg = Number(parts[0]);
         let nonce = parts[2];
 
-        // Cek double claim ke Cloud
+        // Validasi ke Cloud (Wajib Online)
         const check = await fetch(`${DB_URL}used_tokens/${nonce}.json`);
         const cloudData = await check.json();
         if(cloudData && cloudData.claimed) throw "Token Sudah Dipakai!";
         
-        // Mark as used
         await fetch(`${DB_URL}used_tokens/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ claimed: true, by: myID, at: new Date().toISOString() }) });
         
         history.unshift({ 
@@ -465,7 +470,6 @@ async function execClaim() {
         });
         
         recalcBalance(); 
-        updateUI(); 
         alert("✅ DANA DITERIMA!");
         document.getElementById('manualClaim').style.display = 'none'; 
         document.getElementById('tokenIn').value = "";
@@ -488,14 +492,11 @@ async function checkInbox() {
                     let mg = Number(parts[0]);
                     let nonce = parts[2];
                     
-                    // Cek used
                     let check = await fetch(`${DB_URL}used_tokens/${nonce}.json`);
                     let cd = await check.json();
                     
                     if(!cd) {
-                        // Claim otomatis
                         await fetch(`${DB_URL}used_tokens/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ claimed: true, by: myID, via: 'INBOX' }) });
-                        
                         history.unshift({ 
                             flow: 'IN', 
                             t: 'MASUK (INBOX)', 
@@ -507,31 +508,22 @@ async function checkInbox() {
                         });
                         count++;
                     }
-                    // Hapus dari inbox setelah diproses
                     await fetch(`${DB_URL}inbox/${myID}/${k}.json`, { method: 'DELETE' });
-                } catch(e) { console.log("Skip bad token"); }
+                } catch(e) {}
             }
-            if(count > 0){ 
-                recalcBalance(); 
-                updateUI(); 
-                alert(`📬 ${count} Transfer Masuk!`); 
-            }
+            if(count > 0){ recalcBalance(); alert(`📬 ${count} Transfer Masuk!`); }
         }
     } catch(e){}
 }
 
-// --- UTILS & UI ---
 function updateUI() { 
-    if(isNaN(totalMg)) recalcBalance(); 
+    if(isNaN(totalMg)) totalMg = 0;
     document.getElementById('myIDDisplay').innerText = myID; 
-    
     let td = totalMg / MG_PER_DIRHAM; 
     document.getElementById('valDinar').innerText = Math.floor(td / 27); 
     document.getElementById('valDirham').innerText = (td % 27).toFixed(2); 
-    
     document.getElementById('silverGram').innerText = (totalMg / 1000).toFixed(3) + "g"; 
     document.getElementById('goldGram').innerText = (td * (4.25/27)).toFixed(3) + "g"; 
-    
     renderLog(); 
 }
 
@@ -559,13 +551,12 @@ function scanFromFile(inp, target) { if(!inp.files.length) return; let sId = tar
 function toggleClaimManual() { let m = document.getElementById('manualClaim'); m.style.display = m.style.display === 'none' ? 'block' : 'none'; }
 function createSig(d, k) { let s = d + k; let h = 0; for (let i = 0; i < s.length; i++) { h = ((h << 5) - h) + s.charCodeAt(i); h |= 0; } return Math.abs(h).toString(36); }
 function copy(el) { navigator.clipboard.writeText(el.innerText); alert("Token Disalin"); }
-function clearHistory() { if(confirm("Hapus cache lokal? Data akan ditarik ulang dari Cloud.")) { history = []; recalcBalance(); fullRecovery(); } }
+function clearHistory() { if(confirm("Hapus data lokal? Saldo akan jadi 0 sampai di-sync ulang.")) { history = []; recalcBalance(); } }
 function logout() { location.reload(); }
 
-// INITIAL LOAD ONLY
 window.onload = function() {
     if(savedKey) {
-       recalcBalance();
+       recalcBalance(); // Pastikan hitung ulang saat load
        updateUI();
     }
 }
