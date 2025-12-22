@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nuswantara Economic Monitor v5.1</title>
+    <title>Nuswantara Economic Monitor v5.2</title>
     <style>
         :root { --neon: #d4af37; --bg: #050505; --card: #111; --border: #333; }
         body { background-color: var(--bg); color: #e0e0e0; font-family: 'Segoe UI', monospace; margin: 0; padding: 20px; }
@@ -40,10 +40,12 @@
         .blue { color: #3498db; text-shadow: 0 0 10px rgba(52, 152, 219, 0.2); }
         .card-note { font-size: 0.55rem; color: #444; margin-top: 5px; font-style: italic; }
 
-        /* HEALTH INDICATOR */
-        .health-bar { background: #111; padding: 10px; border-radius: 8px; border: 1px solid #333; text-align: center; margin-bottom: 20px; }
-        .health-val { font-size: 1.2rem; font-weight: bold; color: #2ecc71; }
-        .health-label { font-size: 0.6rem; color: #777; text-transform: uppercase; }
+        /* DAILY STATS */
+        .daily-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 25px; }
+        .mini-card { background: #141414; border: 1px solid #222; padding: 10px; text-align: center; border-radius: 8px; }
+        .mini-label { font-size: 0.55rem; color: #555; text-transform: uppercase; letter-spacing: 0.5px; }
+        .mini-val { font-size: 1rem; font-weight: bold; margin-top: 2px; font-family: monospace; }
+        .limit-over { color: #e74c3c; animation: pulse 0.5s infinite; } .limit-warn { color: #f1c40f; } .limit-ok { color: #2ecc71; }
 
         /* TABEL LOG */
         .ledger-box { border: 1px solid #222; height: 450px; overflow-y: auto; background: #000; padding: 0; border-radius: 10px; }
@@ -94,12 +96,12 @@
     <div class="sec-title">STOK BEREDAR (REAL SUPPLY)</div>
     <div class="dashboard">
         <div class="card">
-            <div class="card-title">Stok Emas Setara (Dinar)</div>
+            <div class="card-title">Stok Emas (Dinar)</div>
             <div id="circDinar" class="card-val gold">0.00 Dn</div>
             <div class="card-note">Total Cetak - Total Hangus</div>
         </div>
         <div class="card">
-            <div class="card-title">Stok Perak Setara (Dirham)</div>
+            <div class="card-title">Stok Perak (Dirham)</div>
             <div id="circDirham" class="card-val silver">0.00 Dr</div>
             <div class="card-note">Total Cetak - Total Hangus</div>
         </div>
@@ -116,6 +118,21 @@
             <div class="card-title" style="color:#2ecc71;">Indikator Kesehatan Ekonomi</div>
             <div id="healthVal" class="card-val" style="color:#2ecc71;">0.0x</div>
             <div id="healthDesc" class="card-note">Menunggu Data...</div>
+        </div>
+    </div>
+
+    <div class="daily-stats">
+        <div class="mini-card">
+            <div class="mini-label">QUOTA HARIAN</div>
+            <div id="dailyTotalDisplay" class="mini-val limit-ok">0 / 1000</div>
+        </div>
+        <div class="mini-card" style="border-bottom: 2px solid #3498db;">
+            <div class="mini-label" style="color:#3498db;">TRANSFER</div>
+            <div id="dailyTrfCount" class="mini-val" style="color:#fff;">0</div>
+        </div>
+        <div class="mini-card" style="border-bottom: 2px solid #2ecc71;">
+            <div class="mini-label" style="color:#2ecc71;">CETAK</div>
+            <div id="dailyMintCount" class="mini-val" style="color:#fff;">0</div>
         </div>
     </div>
 
@@ -148,6 +165,7 @@
     // CONFIG: Date Offset +1 Hari & Day Start jam 3
     const DATE_OFFSET = 1; 
     const DAY_START_HOUR = 3;
+    const DAILY_LIMIT = 1000;
 
     const NUSA_MONTH_MAP = ["Wiwitan", "Gangga", "Bija", "Trubus", "Teja", "Baskara", "Kartika", "Huma", "Phala", "Reswara", "Purnaka", "LUMBUNG"]; 
     const PASARANS = ["Legi", "Pahing", "Pon", "Wage", "Kliwon"];
@@ -245,17 +263,27 @@
             let html = "";
             let supplyMg = 0; // Real Supply (Mint - Burn)
             let velocityMg = 0; // Total Volume (Activity)
+            
+            // Daily Limit Check
+            let now = new Date();
+            let todayStart = new Date(now);
+            if(now.getHours() < DAY_START_HOUR) { todayStart.setDate(todayStart.getDate() - 1); }
+            todayStart.setHours(DAY_START_HOUR, 0, 0, 0);
+            let startLimitTime = todayStart.getTime();
+            let dCount=0, dTrf=0, dMint=0;
 
             txs.forEach(tx => {
-                let mg = parseInt(tx.val) || 0;
+                // FORCE POSITIVE FOR VELOCITY (Fix Negative Issue)
+                let rawVal = parseInt(tx.val) || 0;
+                let mg = Math.abs(rawVal);
                 let t = tx.timestamp || tx.time || 0;
                 let rawId = tx.tx_id || tx.txId || "UNK";
                 let shortId = rawId.substring(0,8)+"...";
 
-                // --- 1. VELOCITY CALC (SEMUA TRANSAKSI DIHITUNG) ---
-                velocityMg += mg;
+                // --- 1. VELOCITY CALC (MUTLAK) ---
+                velocityMg += mg; 
 
-                // --- 2. SUPPLY CALC (HANYA MINT & BURN) ---
+                // --- 2. SUPPLY CALC (ARUS KELUAR MASUK) ---
                 let badgeClass="bg-trf", badgeLabel="TRANSFER";
                 let rawFrom = tx.from || tx.issuer || "SYSTEM";
                 let rawTo = tx.to || "SYSTEM";
@@ -266,6 +294,13 @@
                     badgeClass="bg-burn"; badgeLabel="HANGUS"; supplyMg -= mg; rawTo="SYSTEM";
                 } else {
                     badgeClass="bg-trf"; badgeLabel="KIRIM";
+                }
+
+                // Daily Limit
+                if(t >= startLimitTime) {
+                    dCount++;
+                    if(tx.type === 'MINT'||tx.type==='ISSUED') dMint++;
+                    else if(tx.type === 'P2P'||!tx.type) dTrf++;
                 }
 
                 let cal = getNusaCalendar(t);
@@ -288,13 +323,12 @@
             document.getElementById('circDinar').innerText = (supplyMg / MG_PER_DINAR).toFixed(2) + " Dn";
             document.getElementById('circDirham').innerText = (supplyMg / MG_PER_DIRHAM).toFixed(2) + " Dr";
 
-            // Velocity Card (Total Volume in Dirham equivalent for simplicity)
+            // Velocity Card (Total Volume)
             let velDr = velocityMg / MG_PER_DIRHAM;
             document.getElementById('velocityVal').innerText = velDr.toFixed(2) + " Dr";
 
             // --- 4. HEALTH INDICATOR ---
             // Rumus: Velocity / Supply
-            // Hindari pembagian nol
             let ratio = (supplyMg > 0) ? (velocityMg / supplyMg) : 0;
             let hVal = document.getElementById('healthVal');
             let hDesc = document.getElementById('healthDesc');
@@ -306,6 +340,13 @@
             else if(ratio < 5) { hDesc.innerText = "Ekonomi Aktif (Active)"; hVal.style.color = "#2ecc71"; }
             else { hDesc.innerText = "Ekonomi Booming (High)"; hVal.style.color = "#f1c40f"; }
 
+            // Daily Limit UI
+            let dlEl = document.getElementById('dailyTotalDisplay');
+            dlEl.innerText = `${dCount} / ${DAILY_LIMIT}`;
+            dlEl.className = "mini-val " + (dCount >= DAILY_LIMIT ? "limit-over" : (dCount >= DAILY_LIMIT*0.8 ? "limit-warn" : "limit-ok"));
+            document.getElementById('dailyTrfCount').innerText = dTrf;
+            document.getElementById('dailyMintCount').innerText = dMint;
+
         } catch(e) { tbody.innerHTML = `<tr><td colspan="4" style="color:#e74c3c; text-align:center;">Error: ${e}</td></tr>`; }
     }
 
@@ -315,4 +356,3 @@
 
 </body>
 </html>
-
