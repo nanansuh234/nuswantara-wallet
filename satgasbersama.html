@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nuswantara Command Center v12.0 (Deep Trace)</title>
+    <style>
+        :root { 
+            --bg: #050505; --card: #111; --border: #333; 
+            --gold: #f1c40f; --blue: #3498db; --green: #2ecc71; 
+            --red: #e74c3c; --orange: #e67e22;
+        }
+        body { background-color: var(--bg); color: #e0e0e0; font-family: 'Segoe UI', monospace; margin: 0; padding: 20px; }
+        .container { max-width: 1300px; margin: 0 auto; border: 1px solid var(--border); border-radius: 15px; padding: 20px; background: #0b0b0b; }
+        
+        .header { text-align: center; border-bottom: 2px solid var(--gold); padding-bottom: 15px; margin-bottom: 25px; }
+        .title { font-size: 1.8rem; color: var(--gold); font-weight: bold; letter-spacing: 3px; text-transform: uppercase; }
+        .subtitle { font-size: 0.75rem; color: #888; letter-spacing: 1px; margin-top: 5px; }
+        
+        .grid-main { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; }
+        
+        /* CARDS */
+        .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
+        .card { background: #141414; border: 1px solid #222; padding: 15px; text-align: center; border-radius: 10px; }
+        .val { font-size: 1.3rem; font-weight: bold; color: #fff; margin: 5px 0; }
+        .lbl { font-size: 0.6rem; color: #888; text-transform: uppercase; }
+        
+        /* TRACE TREE VISUALIZATION */
+        .trace-container { background: #0a0505; border: 1px solid #400; border-radius: 10px; padding: 15px; height: 600px; overflow-y: auto; }
+        .trace-header { color: var(--red); font-weight: bold; border-bottom: 1px dashed #500; padding-bottom: 10px; margin-bottom: 10px; display:flex; justify-content:space-between; }
+        
+        .node { font-family: monospace; font-size: 0.8rem; padding: 5px 0; border-left: 1px dashed #333; margin-left: 10px; position: relative; }
+        .node::before { content: '↳'; color: #555; margin-right: 5px; margin-left: -8px; }
+        
+        .lvl-0 { margin-left: 0; border: none; font-weight: bold; font-size: 0.9rem; color: var(--red); margin-bottom: 10px; border-bottom: 1px solid #222; padding-bottom: 5px; }
+        .lvl-0::before { content: '💀'; color: inherit; margin-right: 5px; }
+        
+        .lvl-1 { margin-left: 20px; color: #ff5555; }
+        .lvl-2 { margin-left: 40px; color: #ff8888; }
+        .lvl-3 { margin-left: 60px; color: #ffaaaa; }
+        .lvl-4 { margin-left: 80px; color: #ffcccc; }
+        .lvl-5 { margin-left: 100px; color: #fff; opacity: 0.7; }
+
+        .amt { font-weight: bold; color: #fff; background: #222; padding: 1px 4px; border-radius: 3px; font-size: 0.7rem; }
+        .impact-badge { font-size: 0.6rem; background: var(--red); color: #000; padding: 2px 5px; border-radius: 3px; font-weight: bold; margin-left: 5px; }
+
+        /* ACTION PANEL */
+        .action-panel { background: #111; border: 1px solid #333; border-radius: 10px; padding: 15px; }
+        .btn-burn { background: linear-gradient(45deg, #c0392b, #e74c3c); color: white; border: none; padding: 8px 15px; border-radius: 5px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 5px; }
+        .btn-burn:hover { transform: scale(1.02); }
+
+        .refresh-btn { position: fixed; bottom: 30px; right: 30px; background: var(--gold); color: #000; border: none; width: 50px; height: 50px; border-radius: 50%; font-weight: bold; cursor: pointer; z-index: 100; font-size: 1.5rem; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <div class="title">NUSWANTARA COMMAND CENTER</div>
+        <div class="subtitle">v12.0 • DEEP TRACE & RECOVERY PROTOCOL</div>
+    </div>
+
+    <div class="stats-row">
+        <div class="card" style="border-color:var(--gold);">
+            <div class="lbl">Supply Resmi</div>
+            <div id="dispSupply" class="val" style="color:var(--gold);">0 Dr</div>
+        </div>
+        <div class="card" style="border-color:var(--red);">
+            <div class="lbl">Uang Palsu (Patient Zero)</div>
+            <div id="dispFakeTotal" class="val" style="color:var(--red);">0 Dr</div>
+        </div>
+        <div class="card" style="border-color:var(--orange);">
+            <div class="lbl">Dampak Penyebaran</div>
+            <div id="dispSpread" class="val" style="color:var(--orange);">0 Dr</div>
+        </div>
+        <div class="card" style="border-color:var(--blue);">
+            <div class="lbl">Warga Terdampak</div>
+            <div id="dispVictims" class="val" style="color:var(--blue);">0</div>
+        </div>
+    </div>
+
+    <div class="grid-main">
+        <div class="action-panel">
+            <div style="color:var(--red); font-weight:bold; border-bottom:1px solid #333; padding-bottom:10px; margin-bottom:10px;">
+                🚨 SUMBER PENYEBARAN (TARGET OPERASI)
+            </div>
+            <div id="sourceList" style="height: 500px; overflow-y: auto;">
+                <div style="text-align:center; padding:20px; color:#555;">Memindai Ledger...</div>
+            </div>
+        </div>
+
+        <div class="trace-container">
+            <div class="trace-header">
+                <span>🕸️ PETA PENYEBARAN DANA (DEPTH: 5)</span>
+                <span style="font-size:0.7rem; color:#888;">Live Tracing</span>
+            </div>
+            <div id="traceTree">
+                <div style="text-align:center; padding:50px; color:#555;">
+                    Pilih salah satu sumber di kiri untuk melihat jalur penyebaran.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<button onclick="refreshData()" class="refresh-btn">↻</button>
+
+<script>
+    const DB_URL = "https://pasarnuswantara-default-rtdb.asia-southeast1.firebasedatabase.app/";
+    const MG_PER_DIRHAM = 2980;
+    
+    let allTransactions = []; // Simpan semua TX di memori untuk tracing cepat
+    let detectedSources = []; // Simpan Patient Zero
+
+    // --- FUNGSI TRACING REKURSIF (THE TRACKER) ---
+    function getTraceHTML(parentId, startTime, depth, parentAmount) {
+        if (depth > 5) return ""; // Stop di kedalaman 5
+
+        // Cari transaksi keluar dari parent SETELAH dia terima uang
+        // Logika: Dia cuma bisa nyebarin virus setelah dia terinfeksi
+        let children = allTransactions.filter(tx => 
+            tx.from === parentId && 
+            (tx.timestamp || tx.time) > startTime
+        );
+
+        let html = "";
+        let totalSpread = 0;
+
+        children.forEach(child => {
+            let valDr = (child.val / MG_PER_DIRHAM).toFixed(2);
+            totalSpread += child.val;
+            
+            let threatLevel = depth <= 2 ? "🔴 HIGH" : (depth <= 4 ? "🟠 MED" : "🟡 LOW");
+            
+            html += `<div class="node lvl-${depth}">
+                <span style="color:#aaa;">To:</span> <span style="font-weight:bold; color:#fff;">${child.to}</span> 
+                <span class="amt">${valDr} Dr</span>
+                <span style="font-size:0.6rem; color:#555;">(${new Date(child.timestamp||child.time).toLocaleTimeString()})</span>
+                ${getTraceHTML(child.to, child.timestamp||child.time, depth + 1, child.val)}
+            </div>`;
+        });
+
+        return html;
+    }
+
+    // --- KLIK SUMBER UNTUK LIHAT POHON ---
+    window.viewTree = function(sourceId, amountMg, startTime) {
+        let valDr = (amountMg / MG_PER_DIRHAM).toFixed(2);
+        
+        let treeHTML = `<div class="node lvl-0">
+            SUMBER: ${sourceId} <span class="amt" style="background:var(--red);">${valDr} Dr</span>
+            <div style="font-size:0.6rem; font-weight:normal; margin-top:5px; color:#aaa;">Waktu Injeksi: ${new Date(startTime).toLocaleString()}</div>
+        </div>`;
+        
+        // Mulai Tracing Anak-anaknya
+        treeHTML += getTraceHTML(sourceId, startTime, 1, amountMg);
+        
+        document.getElementById('traceTree').innerHTML = treeHTML;
+    };
+
+    // --- FUNGSI PEMUSNAHAN (INCINERATOR) ---
+    window.incinerateSource = async function(targetId, amountMg) {
+        if(!confirm(`🔥 BAKAR SUMBER INI?\nTarget: ${targetId}\nNilai: ${(amountMg/MG_PER_DIRHAM).toFixed(2)} Dr\n\nIni akan menetralkan sumber penyebaran.`)) return;
+        
+        try {
+            const nonce = "BURN-" + Math.random().toString(36).substring(2, 9).toUpperCase();
+            await fetch(`${DB_URL}public_ledger/${nonce}.json`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    type: 'BURN', from: targetId, to: 'SYSTEM_INCINERATOR',
+                    val: amountMg, note: 'SOURCE_NEUTRALIZED',
+                    timestamp: Date.now(), tx_id: nonce, signature: 'SYSTEM_AUTO'
+                })
+            });
+            alert("✅ Target berhasil dinetralkan.");
+            refreshData();
+        } catch(e) { alert("Error: " + e); }
+    };
+
+    async function refreshData() {
+        try {
+            let resLedger = await fetch(`${DB_URL}public_ledger.json`).then(r => r.json()).catch(() => null) || {};
+            let resCensus = await fetch(`${DB_URL}census_report.json`).then(r => r.json()).catch(() => null) || {};
+            
+            // Siapkan Data
+            allTransactions = Object.entries(resLedger).map(([k, v]) => ({
+                ...v, id: k, val: Math.abs(Number(v.val)||0)
+            })).sort((a,b) => (a.timestamp||a.time) - (b.timestamp||b.time));
+
+            let totalWallet = 0;
+            for(let k in resCensus) totalWallet += (parseInt(resCensus[k].balance_mg)||0);
+
+            // Analisa Patient Zero
+            detectedSources = [];
+            let totalFake = 0;
+            let totalSpread = 0;
+            let victims = new Set();
+
+            allTransactions.forEach(tx => {
+                // Cari Fake Mint (Unsigned)
+                if (tx.type === 'MINT' && (!tx.signature || tx.signature.length < 10)) {
+                    // Cek apakah sudah dibakar?
+                    let isBurned = allTransactions.some(t => t.type === 'BURN' && t.from === tx.to && t.val === tx.val);
+                    
+                    if(!isBurned) {
+                        detectedSources.push(tx);
+                        totalFake += tx.val;
+                        victims.add(tx.to); // Pelaku/Korban pertama
+                    }
+                }
+                
+                // Hitung penyebaran (kasar)
+                // Kalau pengirim ada di set victims, maka penerima juga victim
+                if (victims.has(tx.from) && tx.type !== 'BURN') {
+                    victims.add(tx.to);
+                    totalSpread += tx.val;
+                }
+            });
+
+            // RENDER LIST KIRI
+            let listHtml = "";
+            if (detectedSources.length === 0) {
+                listHtml = '<div style="text-align:center; padding:20px; color:var(--green);">✅ AREA BERSIH</div>';
+            } else {
+                detectedSources.forEach(src => {
+                    let valDr = (src.val / MG_PER_DIRHAM).toFixed(2);
+                    listHtml += `
+                    <div style="background:#1a1a1a; padding:10px; border-bottom:1px solid #333; margin-bottom:5px; border-left:3px solid var(--red);">
+                        <div style="font-weight:bold; color:#fff;">${src.to}</div>
+                        <div style="font-size:0.7rem; color:var(--red);">+${valDr} Dr (ILEGAL)</div>
+                        <div style="display:flex; gap:5px; margin-top:5px;">
+                            <button class="btn-burn" style="background:#333; font-size:0.6rem; width:auto;" onclick="viewTree('${src.to}', ${src.val}, ${src.timestamp||src.time})">🔍 LACAK</button>
+                            <button class="btn-burn" style="width:auto;" onclick="incinerateSource('${src.to}', ${src.val})">🔥 BAKAR</button>
+                        </div>
+                    </div>`;
+                });
+            }
+            document.getElementById('sourceList').innerHTML = listHtml;
+
+            // UPDATE STATS
+            document.getElementById('dispSupply').innerText = (totalWallet/MG_PER_DIRHAM).toLocaleString('en-US', {maximumFractionDigits:0}) + " Dr";
+            document.getElementById('dispFakeTotal').innerText = (totalFake/MG_PER_DIRHAM).toLocaleString('en-US', {maximumFractionDigits:2}) + " Dr";
+            document.getElementById('dispSpread').innerText = (totalSpread/MG_PER_DIRHAM).toLocaleString('en-US', {maximumFractionDigits:2}) + " Dr";
+            document.getElementById('dispVictims').innerText = victims.size;
+
+        } catch(e) { console.error(e); }
+    }
+
+    refreshData();
+    setInterval(refreshData, 5000);
+</script>
+
+</body>
+</html>
