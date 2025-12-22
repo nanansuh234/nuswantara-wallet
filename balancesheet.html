@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nuswantara Public Ledger v5.0</title>
+    <title>Nuswantara Economic Monitor v5.1</title>
     <style>
         :root { --neon: #d4af37; --bg: #050505; --card: #111; --border: #333; }
         body { background-color: var(--bg); color: #e0e0e0; font-family: 'Segoe UI', monospace; margin: 0; padding: 20px; }
         .container { max-width: 950px; margin: 0 auto; border: 1px solid var(--border); border-radius: 15px; padding: 20px; box-shadow: 0 0 60px rgba(0,0,0,0.8); background: #0b0b0b; }
         
-        /* HEADER WAKTU (DAY CYCLE) */
+        /* HEADER WAKTU */
         .time-header { text-align: center; border-bottom: 2px solid var(--neon); padding-bottom: 15px; margin-bottom: 20px; background: rgba(20,20,20,0.6); border-radius: 10px; padding-top: 15px; border: 1px solid #222; }
         .nusa-year { font-size: 0.8rem; color: #777; letter-spacing: 4px; text-transform: uppercase; margin-bottom: 5px; }
         .nusa-date { font-size: 1.8rem; color: var(--neon); font-weight: bold; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 5px; text-shadow: 0 0 15px rgba(212, 175, 55, 0.4); }
@@ -18,7 +18,7 @@
         .nusa-digital { font-size: 1.2rem; color: #f39c12; font-family: 'Courier New', monospace; background: #000; padding: 2px 8px; border-radius: 4px; border: 1px solid #444; }
         .nusa-desc { font-size: 0.75rem; color: #aaa; font-style: italic; margin-top: 5px; }
 
-        /* STATUS & GRID */
+        /* LIVE STATUS */
         .sub-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 0 5px; }
         h1 { color: #f39c12; margin: 0; font-size: 1.1rem; letter-spacing: 2px; text-transform: uppercase; }
         .live-status { display: inline-flex; align-items: center; background: rgba(46, 204, 113, 0.1); border: 1px solid rgba(46, 204, 113, 0.3); padding: 5px 12px; border-radius: 20px; }
@@ -26,32 +26,37 @@
         .status-text { font-size: 0.65rem; color: #2ecc71; font-weight: bold; letter-spacing: 1px; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
 
-        .dashboard { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 15px; }
+        /* SECTION TITLE */
+        .sec-title { font-size: 0.7rem; color: #555; text-transform: uppercase; letter-spacing: 2px; margin: 20px 0 10px 0; border-bottom: 1px dashed #333; padding-bottom: 5px; }
+
+        /* DASHBOARD GRID */
+        .dashboard { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 10px; }
         .card { background: #141414; border: 1px solid #222; padding: 15px; text-align: center; border-radius: 10px; }
         .card-title { color: #888; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
         .card-val { font-size: 1.6rem; font-weight: bold; color: #fff; }
         .gold { color: #f1c40f; text-shadow: 0 0 10px rgba(241, 196, 15, 0.2); }
         .silver { color: #bdc3c7; text-shadow: 0 0 10px rgba(189, 195, 199, 0.2); }
+        
+        .blue { color: #3498db; text-shadow: 0 0 10px rgba(52, 152, 219, 0.2); }
         .card-note { font-size: 0.55rem; color: #444; margin-top: 5px; font-style: italic; }
 
-        .daily-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 25px; }
-        .mini-card { background: #141414; border: 1px solid #222; padding: 10px; text-align: center; border-radius: 8px; }
-        .mini-label { font-size: 0.55rem; color: #555; text-transform: uppercase; letter-spacing: 0.5px; }
-        .mini-val { font-size: 1rem; font-weight: bold; margin-top: 2px; font-family: monospace; }
-        .limit-over { color: #e74c3c; animation: pulse 0.5s infinite; } .limit-warn { color: #f1c40f; } .limit-ok { color: #2ecc71; }
+        /* HEALTH INDICATOR */
+        .health-bar { background: #111; padding: 10px; border-radius: 8px; border: 1px solid #333; text-align: center; margin-bottom: 20px; }
+        .health-val { font-size: 1.2rem; font-weight: bold; color: #2ecc71; }
+        .health-label { font-size: 0.6rem; color: #777; text-transform: uppercase; }
 
-        .ledger-box { border: 1px solid #222; height: 500px; overflow-y: auto; background: #000; padding: 0; border-radius: 10px; }
+        /* TABEL LOG */
+        .ledger-box { border: 1px solid #222; height: 450px; overflow-y: auto; background: #000; padding: 0; border-radius: 10px; }
         table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
         th { text-align: left; background: #1a1a1a; padding: 12px 15px; color: #888; text-transform: uppercase; font-size: 0.6rem; position: sticky; top: 0; z-index: 10; border-bottom: 1px solid #333; letter-spacing: 1px; }
         td { border-bottom: 1px solid #111; padding: 10px 15px; vertical-align: top; }
         tr:hover { background: #0e0e0e; }
 
-        /* BADGES */
+        /* BADGES & FLOW */
         .badge { padding: 3px 6px; border-radius: 4px; font-size: 0.6rem; font-weight: bold; border: 1px solid transparent; display: inline-block; text-transform: uppercase; width: 70px; text-align: center; margin-bottom: 4px; }
         .bg-mint { background: rgba(46, 204, 113, 0.1); color: #2ecc71; border-color: #2ecc71; }
         .bg-trf { background: rgba(52, 152, 219, 0.1); color: #3498db; border-color: #3498db; }
         .bg-burn { background: rgba(231, 76, 60, 0.1); color: #e74c3c; border-color: #e74c3c; }
-        
         .tx-val { font-weight: bold; font-size: 0.85rem; font-family: monospace; }
         .tx-ref { font-family: monospace; font-size: 0.55rem; color: #555; display: block; letter-spacing: 0.5px; }
         
@@ -79,40 +84,38 @@
     </div>
 
     <div class="sub-header">
-        <h1>NERACA & LEDGER</h1>
+        <h1>MONITOR EKONOMI NUSWANTARA</h1>
         <div class="live-status">
             <span class="blink-dot"></span>
             <span class="status-text">LIVE SYNC</span>
         </div>
     </div>
     
+    <div class="sec-title">STOK BEREDAR (REAL SUPPLY)</div>
     <div class="dashboard">
         <div class="card">
-            <div class="card-title">Suplai Beredar Setara (Emas)</div>
+            <div class="card-title">Stok Emas (Dinar)</div>
             <div id="circDinar" class="card-val gold">0.00 Dn</div>
-            <div id="eqGold" style="font-size:0.65rem; color:#666; margin-top:5px;">... Gram Au</div>
             <div class="card-note">Total Cetak - Total Hangus</div>
         </div>
         <div class="card">
-            <div class="card-title">Suplai Beredar Setara (Perak)</div>
+            <div class="card-title">Stok Perak (Dirham)</div>
             <div id="circDirham" class="card-val silver">0.00 Dr</div>
-            <div id="eqSilver" style="font-size:0.65rem; color:#666; margin-top:5px;">... Gram Ag</div>
             <div class="card-note">Total Cetak - Total Hangus</div>
         </div>
     </div>
 
-    <div class="daily-stats">
-        <div class="mini-card">
-            <div class="mini-label">QUOTA HARIAN</div>
-            <div id="dailyTotalDisplay" class="mini-val limit-ok">0 / 1000</div>
+    <div class="sec-title">ARUS KECEPATAN UANG (VELOCITY)</div>
+    <div class="dashboard">
+        <div class="card" style="border-color: #3498db;">
+            <div class="card-title" style="color:#3498db;">Total Volume Transaksi</div>
+            <div id="velocityVal" class="card-val blue">0.00 Dr</div>
+            <div class="card-note">Akumulasi Semua Pergerakan Uang</div>
         </div>
-        <div class="mini-card" style="border-bottom: 2px solid #3498db;">
-            <div class="mini-label" style="color:#3498db;">TRANSFER</div>
-            <div id="dailyTrfCount" class="mini-val" style="color:#fff;">0</div>
-        </div>
-        <div class="mini-card" style="border-bottom: 2px solid #2ecc71;">
-            <div class="mini-label" style="color:#2ecc71;">CETAK</div>
-            <div id="dailyMintCount" class="mini-val" style="color:#fff;">0</div>
+        <div class="card" style="border-color: #2ecc71;">
+            <div class="card-title" style="color:#2ecc71;">Indikator Kesehatan Ekonomi</div>
+            <div id="healthVal" class="card-val" style="color:#2ecc71;">0.0x</div>
+            <div id="healthDesc" class="card-note">Menunggu Data...</div>
         </div>
     </div>
 
@@ -141,14 +144,9 @@
     const DB_URL = "https://pasarnuswantara-default-rtdb.asia-southeast1.firebasedatabase.app/";
     const MG_PER_DIRHAM = 2980;
     const MG_PER_DINAR = 80460;
-    const DAILY_LIMIT = 1000;
     
-    // --- KONFIGURASI TANGGAL ---
-    // OFFSET: 1 (Karena di komputer user tanggal 22, tapi realitanya 23)
+    // CONFIG: Date Offset +1 Hari & Day Start jam 3
     const DATE_OFFSET = 1; 
-    
-    // START OF DAY: Jam 03:00 (Fase 4)
-    // Jadi hitungan tanggal baru dimulai saat jam >= 3
     const DAY_START_HOUR = 3;
 
     const NUSA_MONTH_MAP = ["Wiwitan", "Gangga", "Bija", "Trubus", "Teja", "Baskara", "Kartika", "Huma", "Phala", "Reswara", "Purnaka", "LUMBUNG"]; 
@@ -157,42 +155,31 @@
         "2025": { code: "001", label: "TAHUN 001 - AIR (VENUS)" },
         "2026": { code: "002", label: "TAHUN 002 - BATU (SATURNUS)" }
     };
-    
-    // Phase 3 (Hening) = Jam 00-03 Masehi. Phase 4 (Fajar) = Jam 03-06 Masehi (Ganti Hari)
     const PHASE_DB = [
         { id: 7, name: "ISTIWA", desc: "Hening/Istiwa", range: [12, 14] },
         { id: 8, name: "ASAR", desc: "Wrapping Up", range: [15, 17] },
         { id: 1, name: "SANDIKALA", desc: "Transisi & Sosial", range: [18, 20] },
         { id: 2, name: "SIREPAN", desc: "Istirahat Fisik", range: [21, 23] },
-        { id: 3, name: "HENING", desc: "Istirahat Mental", range: [0, 2] }, // Masih Hari Kemarin
-        { id: 4, name: "FAJAR", desc: "The Golden Hour", range: [3, 5] },   // Start Hari Baru
+        { id: 3, name: "HENING", desc: "Istirahat Mental", range: [0, 2] },
+        { id: 4, name: "FAJAR", desc: "The Golden Hour", range: [3, 5] },
         { id: 5, name: "DUHA", desc: "Start Engine", range: [6, 8] },
         { id: 6, name: "KARYA", desc: "High Performance", range: [9, 11] }
     ];
 
-    // --- KALKULASI JAM NUSWANTARA (90 Menit) ---
+    // --- TIME FUNCTIONS ---
     function convertToNusaClock(h, m) {
         let mTotal = ((h % 12) * 60) + m;
-        let nTotalHours = mTotal / 90; 
-        let nHour = Math.floor(nTotalHours);
-        let nMin = Math.floor((nTotalHours % 1) * 90); 
+        let nHour = Math.floor(mTotal / 90); 
+        let nMin = Math.floor((mTotal / 90 % 1) * 90); 
         if (nHour === 0) nHour = 8; 
         return `${String(nHour).padStart(2,'0')}:${String(nMin).padStart(2,'0')}`;
     }
 
-    // --- FUNGSI WAKTU (DAY CYCLE LOGIC) ---
     function getNusaCalendar(timestamp) {
-        // Buat objek waktu
         let rawDate = new Date(timestamp);
-        
-        // 1. GESER JAM (-3 Jam)
-        // Agar jam 00:00 - 02:59 mundur ke tanggal kemarin.
-        // Jam 03:00 baru masuk tanggal hari ini.
         let adjustedDate = new Date(rawDate.getTime());
-        adjustedDate.setHours(rawDate.getHours() - DAY_START_HOUR);
-
-        // 2. APPLY OFFSET HARIAN (Manual Correction)
-        adjustedDate.setDate(adjustedDate.getDate() + DATE_OFFSET);
+        adjustedDate.setHours(rawDate.getHours() - DAY_START_HOUR); // Day Shift
+        adjustedDate.setDate(adjustedDate.getDate() + DATE_OFFSET); // Offset
 
         let year = adjustedDate.getFullYear();
         let monthIdx = adjustedDate.getMonth();
@@ -201,7 +188,6 @@
         let config = YEAR_CONFIG[year] || { code: "XXX", label: `TAHUN M-${year}` };
         let monthName = NUSA_MONTH_MAP[monthIdx] || "SUWUNG";
 
-        // Pasaran Hitung
         let anchor2025 = new Date(2025, 2, 21);
         let diffTotal = Math.floor((adjustedDate - anchor2025) / 86400000);
         let pIdx = (2 + (diffTotal % 5)) % 5; 
@@ -221,24 +207,13 @@
         let d = new Date(timestamp);
         let h = d.getHours();
         let m = d.getMinutes();
-        
         let seqIdx = Math.floor(h / 3); 
-        // Mapping index ke Phase ID
-        // 0 (00-02) -> Phase 3 (Hening)
-        // 1 (03-05) -> Phase 4 (Fajar)
         const phaseMap = [3, 4, 5, 6, 7, 8, 1, 2];
         let pId = phaseMap[seqIdx];
         let p = PHASE_DB.find(x => x.id === pId);
         let period = (h >= 6 && h < 18) ? "SIANG" : "MALAM";
-
         let digitalNusa = convertToNusaClock(h, m);
-
-        return {
-            name: p.name,
-            desc: p.desc,
-            clock: digitalNusa,
-            period: period
-        };
+        return { name: p.name, desc: p.desc, clock: digitalNusa, period: period };
     }
 
     function updateHeader() {
@@ -254,13 +229,9 @@
     setInterval(updateHeader, 1000);
     updateHeader();
 
-    // --- FLOW HELPER ---
     function formatFlowID(id) {
-        if(!id || id === "SYS" || id === "SYSTEM" || id === "BANK") {
-            return `<span class="sys-badge">SYSTEM</span>`;
-        }
-        let clean = id.replace("WARGA-", "");
-        return `<span class="id-badge">${clean}</span>`;
+        if(!id || id === "SYS" || id === "SYSTEM" || id === "BANK") return `<span class="sys-badge">SYSTEM</span>`;
+        return `<span class="id-badge">${id.replace("WARGA-", "")}</span>`;
     }
 
     async function loadLedger() {
@@ -268,30 +239,12 @@
         try {
             let res = await fetch(`${DB_URL}public_ledger.json`);
             let data = await res.json();
-            
             let txs = [];
-            if(data) {
-                for(let k in data) {
-                    data[k].txId = k; 
-                    txs.push(data[k]);
-                }
-                txs.sort((a,b) => (b.timestamp || b.time) - (a.timestamp || a.time));
-            }
+            if(data) { for(let k in data) { data[k].txId = k; txs.push(data[k]); } txs.sort((a,b) => (b.timestamp||b.time)-(a.timestamp||a.time)); }
 
             let html = "";
-            let supplyMg = 0;
-            
-            // Daily Limit Check: Pakai Logika Fajar (03:00)
-            let now = new Date();
-            let todayStart = new Date(now);
-            // Jika sekarang < jam 3, start of day adalah jam 3 KEMARIN
-            if(now.getHours() < DAY_START_HOUR) {
-                todayStart.setDate(todayStart.getDate() - 1);
-            }
-            todayStart.setHours(DAY_START_HOUR, 0, 0, 0);
-            let startLimitTime = todayStart.getTime();
-
-            let dCount=0, dTrf=0, dMint=0;
+            let supplyMg = 0; // Real Supply (Mint - Burn)
+            let velocityMg = 0; // Total Volume (Activity)
 
             txs.forEach(tx => {
                 let mg = parseInt(tx.val) || 0;
@@ -299,71 +252,59 @@
                 let rawId = tx.tx_id || tx.txId || "UNK";
                 let shortId = rawId.substring(0,8)+"...";
 
+                // --- 1. VELOCITY CALC (SEMUA TRANSAKSI DIHITUNG) ---
+                velocityMg += mg;
+
+                // --- 2. SUPPLY CALC (HANYA MINT & BURN) ---
+                let badgeClass="bg-trf", badgeLabel="TRANSFER";
                 let rawFrom = tx.from || tx.issuer || "SYSTEM";
                 let rawTo = tx.to || "SYSTEM";
 
-                let badgeClass="bg-trf", badgeLabel="TRANSFER";
                 if (tx.type === 'MINT' || tx.type === 'ISSUED') {
-                    badgeClass="bg-mint"; badgeLabel="CETAK"; supplyMg += mg;
-                    rawFrom = "SYSTEM";
+                    badgeClass="bg-mint"; badgeLabel="CETAK"; supplyMg += mg; rawFrom="SYSTEM";
                 } else if (tx.type === 'CASH_OUT' || tx.type === 'BURN') {
-                    badgeClass="bg-burn"; badgeLabel="HANGUS"; supplyMg -= mg;
-                    rawTo = "SYSTEM";
+                    badgeClass="bg-burn"; badgeLabel="HANGUS"; supplyMg -= mg; rawTo="SYSTEM";
                 } else {
                     badgeClass="bg-trf"; badgeLabel="KIRIM";
                 }
 
-                if(t >= startLimitTime) {
-                    dCount++;
-                    if(tx.type === 'MINT' || tx.type === 'ISSUED') dMint++;
-                    else if(tx.type === 'P2P' || tx.type === 'TRANSFER' || !tx.type) dTrf++;
-                }
-
                 let cal = getNusaCalendar(t);
                 let tim = getNusaTime(t);
-                
                 let detailTime = `<span style="color:#b8860b; font-weight:bold; font-size:0.9rem;">${cal.date} ${cal.month}</span> <br> <span style="color:#fff; font-weight:bold;">${tim.name}</span> <span style="color:#777; font-family:monospace;">${tim.clock}</span>`;
-
-                let flowHtml = `
-                    <div class="flow-container">
-                        ${formatFlowID(rawFrom)} 
-                        <span class="arrow">➔</span> 
-                        ${formatFlowID(rawTo)}
-                    </div>
-                `;
-
+                let flowHtml = `<div class="flow-container">${formatFlowID(rawFrom)} <span class="arrow">➔</span> ${formatFlowID(rawTo)}</div>`;
                 let valStr = (mg >= 80460) ? (mg/80460).toFixed(2)+" Dn" : (mg/2980).toFixed(2)+" Dr";
                 let colorVal = (mg >= 80460) ? "#f1c40f" : "#bdc3c7";
 
-                html += `
-                <tr>
-                    <td>${detailTime}</td>
-                    <td style="vertical-align:middle;">
-                        <span class="badge ${badgeClass}">${badgeLabel}</span>
-                        <span class="tx-ref">#${shortId}</span>
-                    </td>
-                    <td>${flowHtml}</td>
-                    <td style="text-align:right;"><span class="tx-val" style="color:${colorVal}">${valStr}</span></td>
-                </tr>`;
+                html += `<tr><td>${detailTime}</td><td style="vertical-align:middle;"><span class="badge ${badgeClass}">${badgeLabel}</span><span class="tx-ref">#${shortId}</span></td><td>${flowHtml}</td><td style="text-align:right;"><span class="tx-val" style="color:${colorVal}">${valStr}</span></td></tr>`;
             });
 
             if(txs.length === 0) html = '<tr><td colspan="4" style="text-align:center; padding:30px; color:#555;">Data Ledger Kosong</td></tr>';
             tbody.innerHTML = html;
 
+            // --- 3. UPDATE CARDS (SUPPLY & VELOCITY) ---
             if(supplyMg < 0) supplyMg = 0; 
-            let tD = supplyMg / MG_PER_DINAR;
-            let tDr = supplyMg / MG_PER_DIRHAM;
             
-            document.getElementById('circDinar').innerText = tD.toFixed(2) + " Dn";
-            document.getElementById('circDirham').innerText = tDr.toFixed(2) + " Dr";
-            document.getElementById('eqGold').innerText = `Eq: ${(tD * 4.25).toFixed(2)}g Au`;
-            document.getElementById('eqSilver').innerText = `Eq: ${(tDr * 2.975).toFixed(2)}g Ag`;
+            // Supply Cards
+            document.getElementById('circDinar').innerText = (supplyMg / MG_PER_DINAR).toFixed(2) + " Dn";
+            document.getElementById('circDirham').innerText = (supplyMg / MG_PER_DIRHAM).toFixed(2) + " Dr";
 
-            let dlEl = document.getElementById('dailyTotalDisplay');
-            dlEl.innerText = `${dCount} / ${DAILY_LIMIT}`;
-            dlEl.className = "mini-val " + (dCount >= DAILY_LIMIT ? "limit-over" : (dCount >= DAILY_LIMIT*0.8 ? "limit-warn" : "limit-ok"));
-            document.getElementById('dailyTrfCount').innerText = dTrf;
-            document.getElementById('dailyMintCount').innerText = dMint;
+            // Velocity Card (Total Volume in Dirham equivalent for simplicity)
+            let velDr = velocityMg / MG_PER_DIRHAM;
+            document.getElementById('velocityVal').innerText = velDr.toFixed(2) + " Dr";
+
+            // --- 4. HEALTH INDICATOR ---
+            // Rumus: Velocity / Supply
+            // Hindari pembagian nol
+            let ratio = (supplyMg > 0) ? (velocityMg / supplyMg) : 0;
+            let hVal = document.getElementById('healthVal');
+            let hDesc = document.getElementById('healthDesc');
+            
+            hVal.innerText = ratio.toFixed(1) + "x";
+            
+            if(ratio < 1) { hDesc.innerText = "Ekonomi Lesu (Slow)"; hVal.style.color = "#777"; }
+            else if(ratio < 2) { hDesc.innerText = "Ekonomi Tumbuh (Growing)"; hVal.style.color = "#3498db"; }
+            else if(ratio < 5) { hDesc.innerText = "Ekonomi Aktif (Active)"; hVal.style.color = "#2ecc71"; }
+            else { hDesc.innerText = "Ekonomi Booming (High)"; hVal.style.color = "#f1c40f"; }
 
         } catch(e) { tbody.innerHTML = `<tr><td colspan="4" style="color:#e74c3c; text-align:center;">Error: ${e}</td></tr>`; }
     }
@@ -374,4 +315,3 @@
 
 </body>
 </html>
-
