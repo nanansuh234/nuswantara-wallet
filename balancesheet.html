@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nuswantara Public Ledger v4.5</title>
+    <title>Nuswantara Public Ledger v4.7</title>
     <style>
         :root { --neon: #d4af37; --bg: #050505; --card: #111; --border: #333; }
         body { background-color: var(--bg); color: #e0e0e0; font-family: 'Segoe UI', monospace; margin: 0; padding: 20px; }
         .container { max-width: 950px; margin: 0 auto; border: 1px solid var(--border); border-radius: 15px; padding: 20px; box-shadow: 0 0 60px rgba(0,0,0,0.8); background: #0b0b0b; }
         
-        /* HEADER WAKTU (CLEAN) */
+        /* HEADER WAKTU */
         .time-header { text-align: center; border-bottom: 2px solid var(--neon); padding-bottom: 15px; margin-bottom: 20px; background: rgba(20,20,20,0.6); border-radius: 10px; padding-top: 15px; border: 1px solid #222; }
         .nusa-year { font-size: 0.8rem; color: #777; letter-spacing: 4px; text-transform: uppercase; margin-bottom: 5px; }
         .nusa-date { font-size: 1.8rem; color: var(--neon); font-weight: bold; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 5px; text-shadow: 0 0 15px rgba(212, 175, 55, 0.4); }
@@ -24,7 +24,6 @@
         .live-status { display: inline-flex; align-items: center; background: rgba(46, 204, 113, 0.1); border: 1px solid rgba(46, 204, 113, 0.3); padding: 5px 12px; border-radius: 20px; }
         .blink-dot { width: 6px; height: 6px; background-color: #2ecc71; border-radius: 50%; display: inline-block; margin-right: 8px; box-shadow: 0 0 8px #2ecc71; animation: pulse 1.5s infinite; }
         .status-text { font-size: 0.65rem; color: #2ecc71; font-weight: bold; letter-spacing: 1px; }
-
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
 
         /* DASHBOARD */
@@ -50,14 +49,21 @@
         td { border-bottom: 1px solid #111; padding: 10px 15px; vertical-align: top; }
         tr:hover { background: #0e0e0e; }
 
-        /* BADGES */
+        /* BADGES & FLOW STYLES (NEW) */
         .badge { padding: 3px 6px; border-radius: 4px; font-size: 0.6rem; font-weight: bold; border: 1px solid transparent; display: inline-block; text-transform: uppercase; width: 70px; text-align: center; margin-bottom: 4px; }
         .bg-mint { background: rgba(46, 204, 113, 0.1); color: #2ecc71; border-color: #2ecc71; }
         .bg-trf { background: rgba(52, 152, 219, 0.1); color: #3498db; border-color: #3498db; }
         .bg-burn { background: rgba(231, 76, 60, 0.1); color: #e74c3c; border-color: #e74c3c; }
+        
         .tx-val { font-weight: bold; font-size: 0.85rem; font-family: monospace; }
         .tx-ref { font-family: monospace; font-size: 0.55rem; color: #555; display: block; letter-spacing: 0.5px; }
         
+        /* FLOW TAGS (ARUS DANA) */
+        .flow-container { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; }
+        .id-badge { background: #222; color: #ddd; padding: 2px 6px; border-radius: 4px; border: 1px solid #444; font-family: monospace; font-size: 0.7rem; }
+        .sys-badge { background: rgba(243, 156, 18, 0.15); color: #f39c12; padding: 2px 6px; border-radius: 4px; border: 1px solid #f39c12; font-weight: bold; font-size: 0.65rem; letter-spacing: 1px; }
+        .arrow { color: #666; font-size: 0.8rem; }
+
         .refresh-btn { background: #1a1a1a; color: var(--neon); border: 1px solid #333; padding: 12px; width: 100%; border-radius: 8px; cursor: pointer; margin-top: 20px; transition: 0.3s; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; }
         .refresh-btn:hover { background: #222; border-color: var(--neon); }
     </style>
@@ -86,13 +92,13 @@
     
     <div class="dashboard">
         <div class="card">
-            <div class="card-title">Suplai Beredar (Emas)</div>
+            <div class="card-title">Suplai Beredar Setara (Emas)</div>
             <div id="circDinar" class="card-val gold">0.00 Dn</div>
             <div id="eqGold" style="font-size:0.65rem; color:#666; margin-top:5px;">... Gram Au</div>
             <div class="card-note">Total Cetak - Total Hangus</div>
         </div>
         <div class="card">
-            <div class="card-title">Suplai Beredar (Perak)</div>
+            <div class="card-title">Suplai Beredar Setara (Perak)</div>
             <div id="circDirham" class="card-val silver">0.00 Dr</div>
             <div id="eqSilver" style="font-size:0.65rem; color:#666; margin-top:5px;">... Gram Ag</div>
             <div class="card-note">Total Cetak - Total Hangus</div>
@@ -118,9 +124,9 @@
         <table id="ledgerTable">
             <thead>
                 <tr>
-                    <th width="35%">Waktu (Nuswantara)</th>
-                    <th width="20%">Tipe & ID</th>
-                    <th width="25%">Arus Dana</th>
+                    <th width="30%">Waktu</th>
+                    <th width="15%">Tipe & ID</th>
+                    <th width="35%">Arus Dana (Flow)</th>
                     <th width="20%" style="text-align:right;">Nominal</th>
                 </tr>
             </thead>
@@ -141,11 +147,11 @@
     const MG_PER_DINAR = 80460;
     const DAILY_LIMIT = 1000;
 
-    const NUSA_MONTHS = ["Wiwitan", "Gangga", "Bija", "Trubus", "Teja", "Baskara", "Kartika", "Huma", "Phala", "Lumbung", "Reswara", "Purnaka", "Suwung"];
+    const NUSA_MONTH_MAP = ["Wiwitan", "Gangga", "Bija", "Trubus", "Teja", "Baskara", "Kartika", "Huma", "Phala", "Reswara", "Purnaka", "LUMBUNG"]; 
+    const PASARANS = ["Legi", "Pahing", "Pon", "Wage", "Kliwon"];
     const YEAR_CONFIG = {
         "2025": { code: "001", label: "TAHUN 001 - AIR (VENUS)" },
-        "2026": { code: "002", label: "TAHUN 002 - BATU (SATURNUS)" },
-        "2027": { code: "003", label: "TAHUN 003 - SURYA (MATAHARI)" }
+        "2026": { code: "002", label: "TAHUN 002 - BATU (SATURNUS)" }
     };
     const PHASE_DB = [
         { id: 7, name: "ISTIWA", desc: "Hening/Istiwa", range: [12, 14] },
@@ -158,28 +164,28 @@
         { id: 6, name: "KARYA", desc: "High Performance", range: [9, 11] }
     ];
 
+    // --- FUNGSI WAKTU (DIRECT MAPPING) ---
     function getNusaCalendar(timestamp) {
         let dateObj = new Date(timestamp);
         let year = dateObj.getFullYear();
+        let monthIdx = dateObj.getMonth();
+        let dateNum = dateObj.getDate(); 
+
         let config = YEAR_CONFIG[year] || { code: "XXX", label: `TAHUN M-${year}` };
-        
-        let anchor = new Date(year, 2, 21);
-        if (dateObj < anchor) {
-            anchor = new Date(year - 1, 2, 21);
-            config = YEAR_CONFIG[year-1] || config;
-        }
-        
-        let diff = Math.floor((dateObj - anchor) / 86400000);
-        let mIdx = Math.floor(diff / 28);
-        let dNum = (diff % 28) + 1;
-        let monthName = NUSA_MONTHS[mIdx] || "Suwung";
-        
+        let monthName = NUSA_MONTH_MAP[monthIdx] || "SUWUNG";
+
+        let anchor2025 = new Date(2025, 2, 21);
+        let diffTotal = Math.floor((dateObj - anchor2025) / 86400000);
+        let pIdx = (2 + (diffTotal % 5)) % 5; 
+        if(pIdx < 0) pIdx += 5;
+
         return {
             yearCode: config.code,
             yearLabel: config.label,
-            date: dNum,
+            date: dateNum, 
             month: monthName.toUpperCase(),
-            fullString: `${dNum} ${monthName.toUpperCase()} ${config.code}`
+            pasaran: PASARANS[pIdx].toUpperCase(),
+            fullString: `${dateNum} ${monthName.toUpperCase()} ${config.code}`
         };
     }
 
@@ -187,11 +193,13 @@
         let d = new Date(timestamp);
         let h = d.getHours();
         let m = d.getMinutes();
+        
         let seqIdx = Math.floor(h / 3); 
         const phaseMap = [3, 4, 5, 6, 7, 8, 1, 2];
         let pId = phaseMap[seqIdx];
         let p = PHASE_DB.find(x => x.id === pId);
         let period = (h >= 6 && h < 18) ? "SIANG" : "MALAM";
+
         return {
             name: p.name,
             desc: p.desc,
@@ -213,6 +221,15 @@
     setInterval(updateHeader, 1000);
     updateHeader();
 
+    // --- HELPER FLOW ID ---
+    function formatFlowID(id) {
+        if(!id || id === "SYS" || id === "SYSTEM" || id === "BANK") {
+            return `<span class="sys-badge">SYSTEM</span>`;
+        }
+        let clean = id.replace("WARGA-", "");
+        return `<span class="id-badge">${clean}</span>`;
+    }
+
     async function loadLedger() {
         const tbody = document.getElementById('tableBody');
         try {
@@ -222,7 +239,6 @@
             let txs = [];
             if(data) {
                 for(let k in data) {
-                    // PENTING: Simpan ID transaksi (key)
                     data[k].txId = k; 
                     txs.push(data[k]);
                 }
@@ -238,15 +254,20 @@
             txs.forEach(tx => {
                 let mg = parseInt(tx.val) || 0;
                 let t = tx.timestamp || tx.time || 0;
-                // Ambil ID (prioritas tx_id, lalu key txId, lalu Unknown)
-                let rawId = tx.tx_id || tx.txId || "UNKNOWN";
-                let shortId = rawId.length > 8 ? rawId.substring(0,8)+"..." : rawId;
+                let rawId = tx.tx_id || tx.txId || "UNK";
+                let shortId = rawId.substring(0,8)+"...";
+
+                // Deteksi From/To
+                let rawFrom = tx.from || tx.issuer || "SYSTEM";
+                let rawTo = tx.to || "SYSTEM";
 
                 let badgeClass="bg-trf", badgeLabel="TRANSFER";
                 if (tx.type === 'MINT' || tx.type === 'ISSUED') {
                     badgeClass="bg-mint"; badgeLabel="CETAK"; supplyMg += mg;
+                    rawFrom = "SYSTEM"; // Pastikan minting dari System
                 } else if (tx.type === 'CASH_OUT' || tx.type === 'BURN') {
                     badgeClass="bg-burn"; badgeLabel="HANGUS"; supplyMg -= mg;
+                    rawTo = "SYSTEM"; // Burn ke System
                 } else {
                     badgeClass="bg-trf"; badgeLabel="KIRIM";
                 }
@@ -260,10 +281,17 @@
                 let cal = getNusaCalendar(t);
                 let tim = getNusaTime(t);
                 
-                let detailTime = `<span style="color:#b8860b; font-weight:bold; font-size:0.9rem;">${cal.date} ${cal.month} ${cal.yearCode}</span> <br> <span style="color:#fff; font-weight:bold;">${tim.name}</span> <span style="color:#777; font-family:monospace;">${tim.clock}</span>`;
+                let detailTime = `<span style="color:#b8860b; font-weight:bold; font-size:0.9rem;">${cal.date} ${cal.month}</span> <br> <span style="color:#fff; font-weight:bold;">${tim.name}</span> <span style="color:#777; font-family:monospace;">${tim.clock}</span>`;
 
-                let from = tx.from ? tx.from.replace("WARGA-", "") : "SYS";
-                let to = tx.to ? tx.to.replace("WARGA-", "") : "SYS";
+                // FLOW VISUALIZATION
+                let flowHtml = `
+                    <div class="flow-container">
+                        ${formatFlowID(rawFrom)} 
+                        <span class="arrow">➔</span> 
+                        ${formatFlowID(rawTo)}
+                    </div>
+                `;
+
                 let valStr = (mg >= 80460) ? (mg/80460).toFixed(2)+" Dn" : (mg/2980).toFixed(2)+" Dr";
                 let colorVal = (mg >= 80460) ? "#f1c40f" : "#bdc3c7";
 
@@ -274,7 +302,7 @@
                         <span class="badge ${badgeClass}">${badgeLabel}</span>
                         <span class="tx-ref">#${shortId}</span>
                     </td>
-                    <td style="font-size:0.75rem;"><span style="color:#aaa;">${from}</span> &rarr; <span style="color:#fff;">${to}</span></td>
+                    <td>${flowHtml}</td>
                     <td style="text-align:right;"><span class="tx-val" style="color:${colorVal}">${valStr}</span></td>
                 </tr>`;
             });
