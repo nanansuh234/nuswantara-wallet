@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nuswantara Central Command</title>
+    <style>
+        :root {
+            --bg: #050505;
+            --card-bg: #121212;
+            --text: #e0e0e0;
+            --gold: #ffc107;
+            --blue: #2196f3;
+            --green: #00e676;
+            --red: #ff5252;
+            --border: #333;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+        }
+
+        /* TOP NAVIGATION */
+        .navbar {
+            background: rgba(18, 18, 18, 0.95);
+            border-bottom: 2px solid var(--gold);
+            padding: 15px 30px;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-brand {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--gold);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: 20px;
+        }
+
+        .nav-link {
+            color: #aaa;
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: bold;
+            transition: 0.3s;
+            text-transform: uppercase;
+        }
+
+        .nav-link:hover {
+            color: #fff;
+            text-shadow: 0 0 5px var(--gold);
+        }
+
+        /* CONTAINER & HEADER */
+        .container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .section-title {
+            border-left: 5px solid var(--gold);
+            padding-left: 15px;
+            font-size: 1.5rem;
+            margin-bottom: 25px;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* GRID SYSTEM */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 50px;
+        }
+
+        /* CARD STYLE */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 25px;
+            transition: 0.3s;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            border-color: #555;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .card-icon {
+            font-size: 2rem;
+            margin-right: 15px;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #fff;
+            margin: 0;
+        }
+
+        .card-desc {
+            font-size: 0.9rem;
+            color: #aaa;
+            margin-bottom: 20px;
+            font-family: 'Consolas', monospace;
+            text-align: justify;
+        }
+
+        .btn-access {
+            display: block;
+            text-align: center;
+            padding: 12px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 0.9rem;
+            transition: 0.3s;
+            letter-spacing: 1px;
+            margin-top: auto;
+        }
+
+        /* BUTTON VARIANTS */
+        .btn-moneter { background: rgba(33, 150, 243, 0.15); color: var(--blue); border: 1px solid var(--blue); }
+        .btn-moneter:hover { background: var(--blue); color: #fff; }
+
+        .btn-security { background: rgba(255, 82, 82, 0.15); color: var(--red); border: 1px solid var(--red); }
+        .btn-security:hover { background: var(--red); color: #fff; }
+
+        .btn-info { background: rgba(255, 193, 7, 0.15); color: var(--gold); border: 1px solid var(--gold); }
+        .btn-info:hover { background: var(--gold); color: #000; }
+
+        /* FOOTER */
+        .footer {
+            text-align: center;
+            padding: 40px;
+            color: #555;
+            font-size: 0.8rem;
+            border-top: 1px solid #222;
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="nav-brand">NUSWANTARA<span style="color:#fff">COMMAND</span></div>
+        <div class="nav-menu">
+            <a href="#moneter" class="nav-link">Moneter</a>
+            <a href="#security" class="nav-link">Keamanan</a>
+            <a href="#info" class="nav-link">Panduan</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        
+        <div id="moneter">
+            <h2 class="section-title">INSTRUMEN KONTROL MONETER</h2>
+            <div class="grid">
+                
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-icon">📊</span>
+                        <h3 class="card-title">Money Flow M2</h3>
+                    </div>
+                    <p class="card-desc">
+                        Panel analisis supply uang beredar (Broad Money). Memonitor perputaran uang, kecepatan sirkulasi, dan total likuiditas yang ada di pasar Nuswantara. Gunakan ini untuk melihat apakah pasar sedang banjir likuiditas atau kekeringan.
+                    </p>
+                    <a href="https://nanansuh234.github.io/nuswantara-wallet/moneyM2.html" class="btn-access btn-moneter">BUKA PANEL M2 &rarr;</a>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-icon">⚖️</span>
+                        <h3 class="card-title">Balance Sheet Monitoring</h3>
+                    </div>
+                    <p class="card-desc">
+                        Neraca Keuangan Sistem. Memantau posisi Aset (Cadangan Emas/Perak) berbanding dengan Liabilitas (Uang Beredar). Alat ini krusial untuk memastikan setiap Dinar/Dirham yang dicetak memiliki underlying asset yang nyata.
+                    </p>
+                    <a href="https://nanansuh234.github.io/nuswantara-wallet/balancesheet.html" class="btn-access btn-moneter">CEK NERACA &rarr;</a>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-icon">🌐</span>
+                        <h3 class="card-title">Digital & Fiat Balancing</h3>
+                    </div>
+                    <p class="card-desc">
+                        Indikator Moneter Hibrida. Menampilkan keseimbangan dan nilai tukar antara mata uang berbasis komoditas (Dn/Dr) dengan uang Fiat (IDR/USD). Berfungsi sebagai acuan kurs real-time bagi para pedagang dan penukar.
+                    </p>
+                    <a href="https://nanansuh234.github.io/nuswantara-wallet/moneterindikator.html" class="btn-access btn-moneter">LIHAT INDIKATOR &rarr;</a>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-icon">📈</span>
+                        <h3 class="card-title">Economic Stability Monitor</h3>
+                    </div>
+                    <p class="card-desc">
+                        Dashboard kesehatan ekonomi makro. Mendeteksi potensi Inflasi atau Deflasi sistemik. Memberikan sinyal peringatan dini jika terjadi ketidakstabilan harga atau guncangan pasar yang ekstrem.
+                    </p>
+                    <a href="https://nanansuh234.github.io/nuswantara-wallet/SystemStability.html" class="btn-access btn-moneter">ANALISIS STABILITAS &rarr;</a>
+                </div>
+
+            </div>
+        </div>
+
+        <div id="security">
+            <h2 class="section-title" style="border-color: var(--red);">KEAMANAN & AUDIT FORENSIK</h2>
+            <div class="grid">
+
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-icon">👮</span>
+                        <h3 class="card-title">Audit Forensik Wallet</h3>
+                    </div>
+                    <p class="card-desc">
+                        (Satgas Bersama) Alat pelacakan untuk memvalidasi identitas wallet dan aliran transaksi mencurigakan. Digunakan oleh auditor untuk memeriksa integritas pengguna dan memastikan tidak ada manipulasi saldo.
+                    </p>
+                    <a href="https://nanansuh234.github.io/nuswantara-wallet/satgasbersama.html" class="btn-access btn-security">AKSES AUDIT &rarr;</a>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-icon">🚫</span>
+                        <h3 class="card-title">Injection & AML Detection</h3>
+                    </div>
+                    <p class="card-desc">
+                        Sistem deteksi dini pencucian uang (Money Laundering) dan injeksi dana ilegal. Memindai ledger untuk menemukan pola transaksi tidak wajar, pencetakan uang palsu, atau bypass sistem keamanan.
+                    </p>
+                    <a href="https://nanansuh234.github.io/nuswantara-wallet/ilegal.html" class="btn-access btn-security">SCAN ILEGAL &rarr;</a>
+                </div>
+
+            </div>
+        </div>
+
+        <div id="info">
+            <h2 class="section-title" style="border-color: var(--gold);">PUSAT INFORMASI</h2>
+            <div class="grid">
+
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-icon">📖</span>
+                        <h3 class="card-title">Tutorial Wallet</h3>
+                    </div>
+                    <p class="card-desc">
+                        Panduan lengkap penggunaan Nuswantara Wallet. Mulai dari cara membuat akun, backup Private Key, scan QR, hingga melakukan transfer. Wajib dibaca bagi warga baru.
+                    </p>
+                    <a href="https://nanansuh234.github.io/nuswantara-wallet/panduan.html" class="btn-access btn-info">BACA PANDUAN &rarr;</a>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-icon">ℹ️</span>
+                        <h3 class="card-title">General Info (FYI)</h3>
+                    </div>
+                    <p class="card-desc">
+                        Papan pengumuman sistem, pembaruan versi (Changelog), dan informasi umum mengenai ekosistem Nuswantara. Cek secara berkala untuk update terbaru.
+                    </p>
+                    <a href="https://nanansuh234.github.io/nuswantara-wallet/info2.html" class="btn-access btn-info">LIHAT PENGUMUMAN &rarr;</a>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        &copy; 2025 NUSWANTARA ECONOMIC SYSTEM<br>
+        <span style="color:#333">SECURE ENCRYPTED CONNECTION</span>
+    </div>
+
+</body>
+</html>
