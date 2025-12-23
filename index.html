@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nuswantara Wallet v27.0 (Struk & Trace)</title>
+    <title>Nuswantara Wallet v27.2 (Secure Ecosystem)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
@@ -70,7 +70,7 @@
     <div id="walletPanel" style="display:none;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
             <div style="text-align:left;">
-                <span style="font-size: 0.65rem; color: #f39c12; letter-spacing: 1px; font-weight: bold;">NUSWANTARA v27.0</span><br>
+                <span style="font-size: 0.65rem; color: #f39c12; letter-spacing: 1px; font-weight: bold;">NUSWANTARA v27.2</span><br>
                 <div style="display:flex; align-items:center;">
                     <div id="myIDDisplay" class="id-badge">ID: ...</div>
                     <button onclick="forceReport()" class="btn-report">📡 LAPOR</button>
@@ -240,14 +240,29 @@ const DB_URL = "https://pasarnuswantara-default-rtdb.asia-southeast1.firebasedat
 const MG_PER_DIRHAM = 2980;
 const MG_PER_DINAR = 80460;
 
-// STATE
+// --- STATE & SECURITY INITIALIZATION (V27.2) ---
 let savedKey = localStorage.getItem('nw_key') || "";
 let savedPass = localStorage.getItem('nw_pass') || "";
 let savedTxPin = localStorage.getItem('nw_tx_pin') || "";
+let myID = localStorage.getItem('nw_name');
 let totalMg = 0; 
 let history = [];
 
-let myID = localStorage.getItem('nw_name');
+// [SECURITY] AUTO-WIPE IF NO KEY
+if (!savedKey) {
+    localStorage.removeItem('nw_mg');
+    localStorage.removeItem('nw_hist');
+    totalMg = 0;
+    history = [];
+} else {
+    totalMg = parseInt(localStorage.getItem('nw_mg') || 0);
+    try {
+        let rawHist = localStorage.getItem('nw_hist');
+        history = rawHist ? JSON.parse(rawHist) : [];
+    } catch(e) { history = []; }
+}
+// -----------------------------------------------
+
 let html5QrCode, setupQrCode;
 
 if (savedKey && !myID) {
@@ -261,22 +276,20 @@ if(myID) {
     localStorage.setItem('nw_name', myID);
 }
 
-try {
-    let rawHist = localStorage.getItem('nw_hist');
-    history = rawHist ? JSON.parse(rawHist) : [];
-} catch(e) { history = []; }
-totalMg = parseInt(localStorage.getItem('nw_mg') || 0);
-
+// LOGIKA TAMPILAN LOCKSCREEN
 if(savedKey === "") {
     document.getElementById('lockScreen').style.display = "block";
     document.getElementById('lockTitle').innerText = "SETUP WALLET BARU";
     document.getElementById('loginPass').placeholder = "Buat Password (Huruf+Angka+Simbol)";
+    document.getElementById('walletPanel').style.display = "none";
 } else {
     document.getElementById('lockScreen').style.display = "block";
     document.getElementById('loginKey').style.display = "none"; 
     document.querySelector('.btn-scan-key').style.display = "none";
     document.querySelector('.file-btn').style.display = "none";
     document.getElementById('lockTitle').innerText = "LOGIN WALLET";
+    document.getElementById('valDinar').innerText = "0";
+    document.getElementById('valDirham').innerText = "0.00";
 }
 
 function normalizeID(id) {
@@ -297,7 +310,6 @@ function showToast(msg, type = 'success') {
     }, 3000);
 }
 
-// --- FUNGSI STRUK BARU ---
 function showReceipt(txId, to, amt, date) {
     document.getElementById('rcptDate').innerText = date;
     document.getElementById('rcptId').innerText = txId;
@@ -308,6 +320,13 @@ function showReceipt(txId, to, amt, date) {
 
 async function auditSync(silent = false) {
     if(!myID) return;
+    
+    // [SECURITY] NO KEY = NO DATA
+    if(!savedKey) {
+        if(!silent) showToast("Akses Ditolak: Kunci Privat Tidak Ada", "error");
+        return;
+    }
+
     let statusEl = document.getElementById('syncStatus');
     if(!silent) statusEl.innerHTML = '<span class="pulse">⏳ MENGHITUNG...</span>';
 
@@ -323,14 +342,16 @@ async function auditSync(silent = false) {
         if (ledger) {
             for (let key in ledger) {
                 let tx = ledger[key];
-                
                 let val = Math.abs(Number(tx.val) || 0);
-                
                 let sender = normalizeID(tx.from || tx.sender);
                 let receiver = normalizeID(tx.to);
                 let me = normalizeID(myID); 
 
-                if (tx.type === 'MINT' && (!tx.signature || tx.signature.length < 10)) continue; 
+                // --- [CRITICAL SECURITY UPDATE v27.2] ---
+                // TOLAK SEMUA TRANSAKSI TANPA TANDA TANGAN (SIGNATURE)
+                // Ini mencegah mining palsu atau transfer dari wallet "hantu".
+                if (!tx.signature || tx.signature.length < 5) continue; 
+                // ----------------------------------------
 
                 let isRelated = false;
 
@@ -359,7 +380,7 @@ async function auditSync(silent = false) {
                             label: (val/MG_PER_DIRHAM).toFixed(2) + " Dr",
                             val: val,
                             time: new Date(tx.timestamp || tx.time || Date.now()).toLocaleTimeString(),
-                            txId: tx.tx_id || key // INI KUNCI PELACAKANNYA
+                            txId: tx.tx_id || key 
                         });
                     }
                 }
@@ -463,9 +484,7 @@ async function executeTransfer() {
             btn.disabled = false;
             return showToast(`❌ ID Penerima Tidak Ditemukan: ${dest}`, "error");
         }
-    } catch(e) {
-        console.log("Skip check due to network");
-    }
+    } catch(e) { console.log("Skip check"); }
 
     btn.innerText = "⏳ MENGIRIM...";
 
@@ -478,8 +497,10 @@ async function executeTransfer() {
     
     try {
         const nonce = "TRF-" + Math.random().toString(36).substring(2, 9).toUpperCase();
+        // GENERATE SIGNATURE PENGIRIM
         const content = `${amtMg}:${Date.now()}:${nonce}:FROM_${myID}`;
-        const token = "TOKEN-" + btoa(content + "|" + createSig(content, savedKey));
+        const signature = createSig(content, savedKey);
+        const token = "TOKEN-" + btoa(content + "|" + signature);
         
         await fetch(`${DB_URL}inbox/${dest}.json`, { method: 'POST', body: JSON.stringify(token) });
         
@@ -489,11 +510,11 @@ async function executeTransfer() {
             to: dest, 
             val: Number(amtMg), 
             timestamp: Date.now(), 
-            tx_id: nonce 
+            tx_id: nonce,
+            signature: signature // SIGNATURE MASUK LEDGER
         }) });
         
         await auditSync(true);
-        // TAMPILKAN STRUK
         showReceipt(nonce, dest, amtDr, new Date().toLocaleString());
         
         document.getElementById('transferModal').style.display = 'none';
@@ -507,10 +528,13 @@ async function executeTransfer() {
 async function quickSend(mg, label) {
     if (mg > totalMg) return showToast("SALDO TIDAK CUKUP!", "error");
     if(prompt(`🔐 PIN TRANSAKSI (6 Digit):`) !== savedTxPin) return showToast("PIN SALAH!", "error");
-    const nonce = "W-" + Math.random().toString(36).substring(2, 7).toUpperCase();
-    const token = "TOKEN-" + btoa(`${mg}:${Date.now()}:${nonce}` + "|" + createSig(`${mg}:${Date.now()}:${nonce}`, savedKey));
     
-    fetch(`${DB_URL}public_ledger/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ type: 'CASH_OUT', from: myID, val: Number(mg), timestamp: Date.now(), tx_id: nonce }) });
+    const nonce = "W-" + Math.random().toString(36).substring(2, 7).toUpperCase();
+    const content = `${mg}:${Date.now()}:${nonce}`;
+    const sig = createSig(content, savedKey);
+    const token = "TOKEN-" + btoa(content + "|" + sig);
+    
+    fetch(`${DB_URL}public_ledger/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ type: 'CASH_OUT', from: myID, val: Number(mg), timestamp: Date.now(), tx_id: nonce, signature: sig }) });
     
     setTimeout(() => auditSync(true), 1500); 
     
@@ -520,10 +544,19 @@ async function quickSend(mg, label) {
 
 async function execClaim() {
     let input = document.getElementById('tokenIn').value.replace("TOKEN-", "").trim(); if(!input) return;
+    
+    if(!savedKey) { showToast("Gagal: Butuh Private Key", "error"); return; }
+
     try {
-        let decoded = atob(input), parts = decoded.split("|")[0].split(":");
-        if(parts.length < 3) throw "Format Invalid";
-        let mg = Number(parts[0]), ts = Number(parts[1]), nonce = parts[2];
+        let decoded = atob(input), parts = decoded.split("|");
+        
+        // [SECURITY] CEK STRUKTUR TOKEN: HARUS ADA SIGNATURE
+        if(parts.length < 2) throw "Token Tidak Aman (Unsigned)";
+        // ---------------------------------------------------
+
+        let data = parts[0].split(":");
+        if(data.length < 3) throw "Format Invalid";
+        let mg = Number(data[0]), ts = Number(data[1]), nonce = data[2];
         
         if(history.some(h => h.txId === nonce)) { showToast("Token sudah dipakai!", "error"); return; }
         
@@ -531,9 +564,11 @@ async function execClaim() {
         let cd = await check.json();
         if(cd && cd.claimed && cd.by === myID) { showToast("♻️ Token milik sendiri dipulihkan.", "info"); auditSync(); return; }
 
-        await fetch(`${DB_URL}used_tokens/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ claimed: true, by: myID, at: new Date().toISOString() }) });
+        const claimSignature = createSig(nonce + myID + "CLAIM", savedKey);
+
+        await fetch(`${DB_URL}used_tokens/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ claimed: true, by: myID, signature: claimSignature, at: new Date().toISOString() }) });
         
-        await fetch(`${DB_URL}public_ledger/${nonce}_CLAIM.json`, { method: 'PUT', body: JSON.stringify({ type: 'CLAIM_QR', to: myID, val: Number(mg), timestamp: Date.now(), tx_id: nonce }) });
+        await fetch(`${DB_URL}public_ledger/${nonce}_CLAIM.json`, { method: 'PUT', body: JSON.stringify({ type: 'CLAIM_QR', to: myID, val: Number(mg), timestamp: Date.now(), tx_id: nonce, signature: claimSignature }) });
         
         await auditSync(true); 
         showToast("✅ DANA DITERIMA!"); document.getElementById('manualClaim').style.display = 'none';
@@ -544,9 +579,12 @@ function toggleClaimManual() { let m = document.getElementById('manualClaim'); m
 function createSig(d, k) { let s = d + k; let h = 0; for (let i = 0; i < s.length; i++) { h = ((h << 5) - h) + s.charCodeAt(i); h |= 0; } return Math.abs(h).toString(36); }
 function copy(el) { navigator.clipboard.writeText(el.innerText); showToast("Disalin ke Clipboard"); }
 function logout() { location.reload(); }
+
 async function forceReport() { 
+    if(!savedKey) return; 
     try { 
-        await fetch(`${DB_URL}census_report/${myID}.json`, { method: 'PUT', body: JSON.stringify({ name: myID, balance_mg: totalMg, last: Date.now() }) }); 
+        const reportSig = createSig(myID + totalMg, savedKey);
+        await fetch(`${DB_URL}census_report/${myID}.json`, { method: 'PUT', body: JSON.stringify({ name: myID, balance_mg: totalMg, last: Date.now(), signature: reportSig }) }); 
         showToast("📡 Laporan Sensus Terkirim", "info");
     } catch(e){} 
 }
