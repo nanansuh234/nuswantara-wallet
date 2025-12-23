@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nuswantara Wallet v25.3 (Final Logic)</title>
+    <title>Nuswantara Wallet v25.4 (Auditor Core)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        body { background-color: #050505; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; font-family: 'Courier New', monospace; color:white; }
+        body { background-color: #050505; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; font-family: 'Consolas', 'Monaco', monospace; color:white; }
         .btn-action { cursor: pointer; transition: 0.2s; font-family: 'Segoe UI', sans-serif; }
         .btn-action:active { transform: scale(0.95); }
         .file-btn { background: #333; color: #aaa; border: 1px dashed #555; padding: 10px; width: 100%; border-radius: 10px; margin-top: 10px; cursor: pointer; font-size: 0.8rem; display:block; box-sizing:border-box; text-align:center;}
@@ -23,20 +23,9 @@
         
         .sync-status { font-size: 0.55rem; color: #555; margin-top: 5px; font-style: italic; }
         
-        /* DEBUG BOX AGAR BISA LIHAT PROSES HITUNG */
-        .debug-log { 
-            width: 100%; 
-            height: 80px; 
-            background: #000; 
-            border: 1px solid #333; 
-            color: #0f0; 
-            font-size: 0.5rem; 
-            overflow-y: scroll; 
-            margin-bottom: 15px; 
-            padding: 5px; 
-            box-sizing: border-box; 
-            white-space: pre-wrap;
-        }
+        /* AUDIT DISPLAY */
+        .audit-row { display: flex; justify-content: space-between; font-size: 0.65rem; color: #888; border-bottom: 1px solid #222; padding: 5px 0; }
+        .audit-val { font-weight: bold; }
     </style>
 </head>
 <body>
@@ -73,7 +62,7 @@
     <div id="walletPanel" style="display:none;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
             <div style="text-align:left;">
-                <span style="font-size: 0.65rem; color: #f39c12; letter-spacing: 1px; font-weight: bold;">NUSWANTARA v25.3</span><br>
+                <span style="font-size: 0.65rem; color: #f39c12; letter-spacing: 1px; font-weight: bold;">NUSWANTARA v25.4</span><br>
                 <div style="display:flex; align-items:center;">
                     <div id="myIDDisplay" class="id-badge">ID: ...</div>
                     <button onclick="forceReport()" class="btn-report">📡 LAPOR</button>
@@ -84,17 +73,20 @@
         
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
             <div id="syncStatus" class="sync-status">Offline Ready</div>
-            <button onclick="deepSync()" style="background:none; border:1px solid #333; color:#2980b9; font-size:0.55rem; padding:3px 8px; border-radius:5px; cursor:pointer;">🔄 FORCE SYNC</button>
+            <button onclick="auditSync()" style="background:none; border:1px solid #333; color:#2980b9; font-size:0.55rem; padding:3px 8px; border-radius:5px; cursor:pointer;">🔄 AUDIT & SYNC</button>
         </div>
 
         <div style="background:#111; padding:20px; border-radius:20px; border: 1px solid #222; margin-bottom: 20px;">
-            <div style="display: flex; justify-content: space-around; text-align: center; margin-bottom: 10px;">
+            <div style="display: flex; justify-content: space-around; text-align: center; margin-bottom: 15px;">
                 <div><div id="valDinar" style="font-size: 2.8rem; font-weight: bold; color: #f39c12;">0</div><div style="font-size: 0.7rem; color: #888; font-weight:bold;">DINAR</div></div>
                 <div><div id="valDirham" style="font-size: 2.8rem; font-weight: bold; color: #bdc3c7;">0</div><div style="font-size: 0.7rem; color: #888; font-weight:bold;">DIRHAM</div></div>
             </div>
             
-            <div style="color:#aaa; font-size:0.5rem; margin-bottom:5px;">LOG DETEKTIF:</div>
-            <div id="debugLog" class="debug-log">Menunggu Sync...</div>
+            <div style="background:#080808; padding:10px; border-radius:10px; border:1px dashed #333; margin-bottom:10px;">
+                <div class="audit-row"><span>Uang Masuk (Income):</span><span id="auditIn" class="audit-val" style="color:#2ecc71">0</span></div>
+                <div class="audit-row"><span>Uang Keluar (Expense):</span><span id="auditOut" class="audit-val" style="color:#e74c3c">0</span></div>
+                <div class="audit-row" style="border:none; padding-top:5px; font-size:0.7rem;"><span>SALDO BERSIH:</span><span id="auditNet" class="audit-val" style="color:#fff">0</span></div>
+            </div>
 
             <div style="border-top: 1px solid #222; padding-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-family: monospace;">
                 <div style="text-align: center; background: rgba(243, 156, 18, 0.1); padding: 8px; border-radius: 10px;">
@@ -206,12 +198,6 @@ let savedTxPin = localStorage.getItem('nw_tx_pin') || "";
 let totalMg = 0; 
 let history = [];
 
-try {
-    let rawHist = localStorage.getItem('nw_hist');
-    history = rawHist ? JSON.parse(rawHist) : [];
-    if(!Array.isArray(history)) history = [];
-} catch(e) { history = []; }
-
 let myID = localStorage.getItem('nw_name');
 let html5QrCode, setupQrCode;
 
@@ -221,13 +207,18 @@ if (savedKey && !myID) {
     localStorage.setItem('nw_name', myID);
 }
 
-// === FIX PENTING: ID HARUS UPPERCASE & NO SPACE ===
+// FORCE ID UPPERCASE
 if(myID) {
     myID = myID.trim().toUpperCase();
-    localStorage.setItem('nw_name', myID); // Simpan ulang versi bersih
+    localStorage.setItem('nw_name', myID);
 }
 
-recalcBalance();
+// INI HANYA UNTUK UI LOAD AWAL, LOGIKA UTAMA ADA DI AUDITSYNC
+try {
+    let rawHist = localStorage.getItem('nw_hist');
+    history = rawHist ? JSON.parse(rawHist) : [];
+} catch(e) { history = []; }
+totalMg = parseInt(localStorage.getItem('nw_mg') || 0);
 
 if(savedKey === "") {
     document.getElementById('lockScreen').style.display = "block";
@@ -241,113 +232,92 @@ if(savedKey === "") {
     document.getElementById('lockTitle').innerText = "LOGIN WALLET";
 }
 
-function recalcBalance() {
-    let calc = 0;
-    if(!Array.isArray(history)) history = [];
-    
-    // FILTER ULANG
-    history = history.filter(h => h && h.val !== undefined && h.val !== null);
-
-    // DEDUPLICATION
-    const uniqueMap = new Map();
-    history.forEach(item => {
-        if (!uniqueMap.has(item.txId)) uniqueMap.set(item.txId, item);
-    });
-    history = Array.from(uniqueMap.values());
-    history.sort((a, b) => new Date(b.time) - new Date(a.time));
-
-    // CALCULATE
-    history.forEach(h => {
-        let val = Number(h.val);
-        if (isNaN(val)) val = 0;
-        if(h.flow === 'IN') calc += val;
-        else if(h.flow === 'OUT') calc -= val;
-    });
-
-    if(calc < 0) calc = 0;
-    totalMg = calc;
-    localStorage.setItem('nw_mg', totalMg);
-    localStorage.setItem('nw_hist', JSON.stringify(history));
-    updateUI();
-}
-
-// --- DEEP SYNC: PERBAIKAN LOGIKA UTAMA (SENSITIVITY FIX) ---
-async function deepSync() {
+// --- CORE FUNCTION: THE AUDITOR (LOGIKA BUKU BESAR) ---
+async function auditSync() {
     if(!myID) return;
     let statusEl = document.getElementById('syncStatus');
-    let logEl = document.getElementById('debugLog');
-    
-    statusEl.innerHTML = '<span class="pulse">⏳ Menganalisa Ledger...</span>';
+    statusEl.innerHTML = '<span class="pulse">⏳ MENGHITUNG ULANG...</span>';
     statusEl.style.color = "#f39c12";
-    logEl.innerText = `[${new Date().toLocaleTimeString()}] Start Sync...\nMY ID: "${myID}"\n`;
 
     try {
-        history = []; // BERSIHKAN LOKAL, KITA PERCAYA DB
-        
         let res = await fetch(`${DB_URL}public_ledger.json`);
         let ledger = await res.json();
         
+        let income = 0;
+        let expense = 0;
+        history = []; // Reset History Lokal
+
         if (ledger) {
-            let processed = 0;
             for (let key in ledger) {
                 let tx = ledger[key];
                 
-                // VALIDASI MINT (Signature Check)
+                // 1. DATA CLEANING
+                // Ambil nilai, pastikan number
+                let val = Math.abs(Number(tx.val) || 0);
+                
+                // Bersihkan ID Pengirim & Penerima (Hapus spasi, Uppercase)
+                let sender = (tx.from || tx.sender || "").toString().trim().toUpperCase();
+                let receiver = (tx.to || "").toString().trim().toUpperCase();
+                let me = myID; 
+
+                // 2. VALIDASI DASAR (Signature Mint)
                 if (tx.type === 'MINT' && (!tx.signature || tx.signature.length < 10)) continue; 
 
-                let flow = null;
-                let val = Number(tx.val) || 0;
-                let displayType = tx.type;
+                // 3. LOGIKA SCORECARD (DEBIT / KREDIT)
+                // Apapun yang terjadi, kalau ID gue ada di 'to', itu PENDAPATAN.
+                // Apapun yang terjadi, kalau ID gue ada di 'from', itu PENGELUARAN.
+                // Kalau transfer ke diri sendiri? Pendapatan nambah, Pengeluaran nambah = Netral (0). AMAN.
 
-                // === KUNCI SUKSES: NORMALISASI DATA ===
-                // Paksa semua jadi UPPERCASE dan tanpa spasi sebelum dicek
-                let txFrom = (tx.from || tx.sender || "").toString().trim().toUpperCase();
-                let txTo = (tx.to || "").toString().trim().toUpperCase();
-                let me = myID; // Sudah di-uppercase di atas
+                let isRelated = false;
 
-                // DEBUGGING LOG (Biar kelihatan kalau ada yg beda tipis)
-                // logEl.innerText += `Check: ${key} | F:${txFrom} -> T:${txTo} (${val})\n`;
-
-                // LOGIKA DETEKSI MILIK SIAPA
-                
-                // 1. KASUS TERIMA UANG (IN)
-                if (txTo === me) {
-                    if (txFrom !== me) { // Bukan kirim ke diri sendiri
-                        flow = "IN";
-                        if(tx.type === 'P2P') displayType = "TERIMA ID";
-                        else if(tx.type === 'CLAIM_QR') displayType = "CLAIM QR";
-                    }
-                }
-                
-                // 2. KASUS KIRIM UANG (OUT)
-                if (txFrom === me) {
-                    // Walaupun txTo == me (kirim diri sendiri), kita catat OUT dulu? 
-                    // TIDAK. Kirim diri sendiri = Netral (0).
-                    if (txTo !== me) {
-                        flow = "OUT";
-                        if(tx.type === 'P2P') displayType = "KIRIM ID";
-                        else if(tx.type === 'CASH_OUT') displayType = "BUAT QR";
-                    }
+                if (receiver === me) {
+                    income += val;
+                    isRelated = true;
                 }
 
-                if(flow) {
-                    processed++;
-                    history.push({
-                        flow: flow,
-                        t: displayType,
-                        label: (val/MG_PER_DIRHAM).toFixed(2) + " Dr",
-                        val: val,
-                        time: new Date(tx.timestamp || tx.time || Date.now()).toLocaleTimeString(),
-                        raw: key,
-                        txId: tx.tx_id || key
-                    });
+                if (sender === me) {
+                    expense += val;
+                    isRelated = true;
+                }
+
+                // 4. SUSUN HISTORY UI
+                if(isRelated) {
+                    let flow = "";
+                    let displayType = tx.type;
+                    
+                    if (receiver === me && sender !== me) flow = "IN";
+                    else if (sender === me && receiver !== me) flow = "OUT";
+                    else if (sender === me && receiver === me) flow = "SELF"; // Transfer diri sendiri
+
+                    if(flow) {
+                        history.push({
+                            flow: flow,
+                            t: displayType,
+                            label: (val/MG_PER_DIRHAM).toFixed(2) + " Dr",
+                            val: val,
+                            time: new Date(tx.timestamp || tx.time || Date.now()).toLocaleTimeString(),
+                            txId: tx.tx_id || key
+                        });
+                    }
                 }
             }
-            logEl.innerText += `Done. Found ${processed} transactions relevant to me.\n`;
         }
 
-        recalcBalance(); 
-        statusEl.innerHTML = "✅ SYNCED & MATCHED";
+        // 5. FINAL CALCULATION
+        totalMg = income - expense;
+        if(totalMg < 0) totalMg = 0; // Safety biar gak minus
+
+        // Simpan
+        localStorage.setItem('nw_mg', totalMg);
+        localStorage.setItem('nw_hist', JSON.stringify(history));
+
+        // Update UI Audit Table
+        document.getElementById('auditIn').innerText = `+${(income/MG_PER_DIRHAM).toFixed(2)} Dr`;
+        document.getElementById('auditOut').innerText = `-${(expense/MG_PER_DIRHAM).toFixed(2)} Dr`;
+        document.getElementById('auditNet').innerText = `${(totalMg/MG_PER_DIRHAM).toFixed(2)} Dr`;
+
+        updateUI(); 
+        statusEl.innerHTML = "✅ DATA TERVERIFIKASI";
         statusEl.style.color = "#2ecc71";
         forceReport();
 
@@ -355,7 +325,6 @@ async function deepSync() {
         console.log("Error:", e);
         statusEl.innerHTML = "⚠️ Gagal Sync";
         statusEl.style.color = "#e74c3c";
-        logEl.innerText += "ERROR: " + e.message;
     }
 }
 
@@ -376,7 +345,7 @@ function unlockWallet() {
             document.getElementById('lockScreen').style.display = "none";
             document.getElementById('walletPanel').style.display = "block";
             if(!savedTxPin) document.getElementById('setupPinModal').style.display = 'flex';
-            deepSync(); 
+            auditSync(); 
         } else {
             msg.innerText = "PASSWORD SALAH!"; document.getElementById('loginPass').value = "";
         }
@@ -389,7 +358,7 @@ function saveTxPin() {
     document.getElementById('setupPinModal').style.display = 'none'; alert("PIN Tersimpan!");
 }
 async function executeTransfer() {
-    let dest = document.getElementById('trfDest').value.trim().toUpperCase(); // FORCE UPPER
+    let dest = document.getElementById('trfDest').value.trim().toUpperCase(); 
     let amtDr = parseFloat(document.getElementById('trfAmt').value);
     let pin = document.getElementById('trfPin').value;
     if(!dest || dest === myID || !amtDr || amtDr <= 0 || pin !== savedTxPin) return alert("Data Transfer Invalid / PIN Salah");
@@ -407,7 +376,6 @@ async function executeTransfer() {
         
         await fetch(`${DB_URL}inbox/${dest}.json`, { method: 'POST', body: JSON.stringify(token) });
         
-        // PENTING: TULIS DENGAN FORMAT BAKU (UPPERCASE)
         await fetch(`${DB_URL}public_ledger/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ 
             type: 'P2P', 
             from: myID, 
@@ -417,7 +385,7 @@ async function executeTransfer() {
             tx_id: nonce 
         }) });
         
-        await deepSync();
+        await auditSync(); // LANGSUNG AUDIT SETELAH TRANSFER
         alert("✅ TRANSFER SUKSES!"); 
         document.getElementById('transferModal').style.display = 'none';
     } catch(e) { 
@@ -433,10 +401,9 @@ async function quickSend(mg, label) {
     const nonce = "W-" + Math.random().toString(36).substring(2, 7).toUpperCase();
     const token = "TOKEN-" + btoa(`${mg}:${Date.now()}:${nonce}` + "|" + createSig(`${mg}:${Date.now()}:${nonce}`, savedKey));
     
-    // TULIS DENGAN ATRIBUT FROM YANG JELAS
     fetch(`${DB_URL}public_ledger/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ type: 'CASH_OUT', from: myID, val: Number(mg), timestamp: Date.now(), tx_id: nonce }) });
     
-    setTimeout(deepSync, 1500); 
+    setTimeout(auditSync, 1500); 
     
     document.getElementById('qrResult').style.display = 'block'; document.getElementById('qrcode').innerHTML = ""; new QRCode(document.getElementById("qrcode"), { text: token, width: 200, height: 200 }); document.getElementById('textToken').innerText = token;
 }
@@ -451,12 +418,12 @@ async function execClaim() {
         
         let check = await fetch(`${DB_URL}used_tokens/${nonce}.json`);
         let cd = await check.json();
-        if(cd && cd.claimed && cd.by === myID) { alert("♻️ Token milik sendiri dipulihkan."); deepSync(); return; }
+        if(cd && cd.claimed && cd.by === myID) { alert("♻️ Token milik sendiri dipulihkan."); auditSync(); return; }
 
         await fetch(`${DB_URL}used_tokens/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ claimed: true, by: myID, at: new Date().toISOString() }) });
         await fetch(`${DB_URL}public_ledger/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ type: 'CLAIM_QR', to: myID, val: Number(mg), timestamp: Date.now(), tx_id: nonce }) });
         
-        await deepSync(); 
+        await auditSync(); 
         alert("✅ DANA DITERIMA!"); document.getElementById('manualClaim').style.display = 'none';
     } catch(e) { alert("GAGAL: " + e); }
 }
@@ -476,7 +443,8 @@ function updateUI() {
     renderLog(); 
 }
 function renderLog() {
-    document.getElementById('historyLog').innerHTML = history.filter(h=>h&&h.val).slice(0, 30).map(h => `
+    history.sort((a, b) => new Date(b.time) - new Date(a.time));
+    document.getElementById('historyLog').innerHTML = history.slice(0, 30).map(h => `
         <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #222; align-items:center;">
             <div><span style="color:${h.flow==='IN'?'#2ecc71':'#e74c3c'}; font-weight:bold; font-size:0.75rem;">${h.flow==='IN'?'⬇️':'⬆️'} ${h.t}</span><br><small style="color:#555;">${h.time||"Recently"}</small></div>
             <span style="font-size:0.55rem; color:#aaa; font-family:monospace;">${h.label}</span>
@@ -490,7 +458,7 @@ function startScanner() { document.getElementById('scanner-wrapper').style.displ
 function stopScanner() { if(html5QrCode) html5QrCode.stop().then(() => { document.getElementById('scanner-wrapper').style.display = 'none'; }); }
 function scanFromFile(inp, target) { if(!inp.files.length) return; let sId = target==='loginKey'?'setupReader':'reader'; const s = new Html5Qrcode(sId); s.scanFile(inp.files[0], true).then(txt => { document.getElementById(target).value = txt; if(target==='loginKey') stopSetupScan(); else { stopScanner(); execClaim(); } }).catch(e => alert("Gagal baca QR")); }
 
-window.onload = function() { if(savedKey) { deepSync(); updateUI(); } }
+window.onload = function() { if(savedKey) { auditSync(); updateUI(); } }
 </script>
 </body>
 </html>
