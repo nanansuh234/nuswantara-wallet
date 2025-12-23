@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>System Stability Settlement v8.0</title>
+    <title>System Stability Settlement v8.1 (Filtered)</title>
     <style>
         :root { 
             --bg: #050505; --card: #111; --border: #333; 
@@ -39,6 +39,7 @@
         .lbl { font-size: 0.6rem; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
         .val { font-size: 1.3rem; font-weight: bold; color: #fff; }
         .sub { font-size: 0.55rem; color: #666; margin-top: 5px; font-style: italic; }
+        .sub-detail { font-size: 0.55rem; color: var(--gold); margin-top: 2px; font-weight: bold; opacity: 0.8; }
 
         /* SPECIAL METERS */
         .meter-box { background: #1a1a1a; height: 6px; width: 100%; border-radius: 3px; margin-top: 8px; overflow: hidden; position: relative; }
@@ -70,14 +71,14 @@
 <div class="container">
     <div class="header">
         <div class="title">NUSWANTARA COMMAND CENTER</div>
-        <div class="subtitle">SYSTEM STABILITY SETTLEMENT • TRANSPARANSI TOTAL • KEADILAN SOSIAL</div>
+        <div class="subtitle">SYSTEM STABILITY SETTLEMENT • ANTI-SPAM PROTECTED • KEADILAN SOSIAL</div>
     </div>
 
     <div class="dashboard-top">
         <div class="card c-gold">
             <div class="lbl">Total Supply</div>
             <div id="dispSupply" class="val" style="color:var(--gold);">0.00 Dr</div>
-            <div class="sub">Total Aset (Digital + Fisik)</div>
+            <div class="sub">Total Aset (Digital + Fisik Valid)</div>
         </div>
         
         <div class="card c-orange">
@@ -114,6 +115,7 @@
             <div class="lbl">Nilai Keringat (Labor Value)</div>
             <div id="dispLabor" class="val" style="color:var(--purple);">0 Jam</div>
             <div class="sub">Total Saldo setara Jam Kerja Manusia</div>
+            <div class="sub-detail">Asumsi: 1 Dirham = 4 Jam Kerja</div>
         </div>
 
         <div class="card c-blue">
@@ -161,13 +163,14 @@
                         <span id="txtPhys" style="color:var(--orange); font-weight:bold;">0 Dr</span>
                     </div>
                     <div class="meter-box" style="background:#222;"><div id="barPhys" class="meter-fill" style="background:var(--orange);"></div></div>
-                    <div class="sub" style="text-align:right;">Dicetak tapi belum diklaim</div>
+                    <div class="sub" style="text-align:right;">Dicetak tapi belum diklaim (Filtered)</div>
                 </div>
 
                 <div style="border: 1px solid #333; padding: 15px; border-radius: 8px; background: #111; text-align:center;">
                     <div style="font-size:0.6rem; color:#888;">STATUS SISTEM</div>
                     <div id="sysStatus" style="font-size:1.2rem; font-weight:bold; color:var(--green); margin:5px 0;">SEHAT</div>
                     <div id="sysMsg" style="font-size:0.6rem; color:#666;">Tidak terdeteksi anomali.</div>
+                    <div id="spamStat" style="font-size:0.55rem; color:#e74c3c; margin-top:5px; border-top:1px dashed #333; padding-top:2px;">Junk Filtered: 0 TX</div>
                 </div>
 
             </div>
@@ -186,7 +189,37 @@
 <script>
     const DB_URL = "https://pasarnuswantara-default-rtdb.asia-southeast1.firebasedatabase.app/";
     const MG_PER_DIRHAM = 2980;
-    const WAGE_PER_HOUR_DR = 0.25; // Asumsi 1 Jam Kerja = 0.25 Dirham (8 Jam = 2 Dirham)
+    const SPAM_THRESHOLD_MG = 800000; // Limit ~10 Dinar sekali kirim
+    
+    // Asumsi: 1 Jam Kerja = 0.25 Dirham (Jadi 4 Jam = 1 Dirham)
+    const WAGE_PER_HOUR_DR = 0.25; 
+
+    // Helper ID Clean
+    function normalizeID(id) {
+        if(!id) return "UNKNOWN";
+        return id.toString().replace(/[^A-Z0-9]/g, "").toUpperCase();
+    }
+
+    // SPAM FILTER LOGIC
+    function isSpam(tx) {
+        let mg = Math.abs(Number(tx.val) || 0);
+        
+        // 1. Nominal Gila (> 10 Dinar)
+        if (mg > SPAM_THRESHOLD_MG) return true;
+        
+        // 2. MINT tanpa Signature
+        if (tx.type === 'MINT' && (!tx.signature || tx.signature.length < 15)) return true;
+
+        // 3. System Fix spam
+        if (tx.note === 'SYSTEM_FIX') return true;
+
+        // 4. Self-Spam
+        let from = normalizeID(tx.from || tx.sender);
+        let to = normalizeID(tx.to);
+        if (tx.type === 'P2P' && from === to) return true;
+
+        return false;
+    }
 
     async function refreshData() {
         document.getElementById('statusConn').innerText = "Syncing...";
@@ -204,14 +237,14 @@
             let bankTotalMg = 0;
             let wealthArray = []; 
 
-            // Process Census (Citizens)
+            // Process Census (Citizens) - ASUMSI SENSUS SUDAH BERSIH
             if (resCensus) {
                 for (let key in resCensus) {
                     let u = resCensus[key];
                     let bal = parseInt(u.balance_mg) || 0;
                     totalWalletMg += bal;
                     holders.push({ id: u.name || key, val: bal, type: 'USER' });
-                    if(bal > 0) wealthArray.push(bal); // For Gini
+                    if(bal > 0) wealthArray.push(bal); 
                 }
             }
 
@@ -222,12 +255,21 @@
                 holders.push({ id: "BANK_CENTRAL", val: bankTotalMg, type: 'BANK' });
             }
 
-            // Process Ledger (Velocity & Physical)
+            // Process Ledger (Velocity & Physical) - DENGAN FILTER SPAM
             let velocityMg = 0;
             let physicalFloatMg = 0;
+            let spamCount = 0;
+
             if(resLedger) {
                 for(let k in resLedger) {
                     let tx = resLedger[k];
+                    
+                    // CEK SPAM
+                    if(isSpam(tx)) {
+                        spamCount++;
+                        continue;
+                    }
+
                     let mg = Math.abs(Number(tx.val) || 0);
                     velocityMg += mg; 
                     
@@ -236,6 +278,8 @@
                 }
             }
             if (physicalFloatMg < 0) physicalFloatMg = 0;
+            
+            // Total Supply Real
             let totalSystemMg = totalWalletMg + physicalFloatMg;
 
             // --- CALCULATIONS ---
@@ -259,7 +303,7 @@
             }
             if (gini < 0) gini = 0;
 
-            // 4. Labor Value
+            // 4. Labor Value (1 Dr = 4 Jam)
             let laborHours = totalDr / WAGE_PER_HOUR_DR;
 
             // 5. Whales Concentration
@@ -327,13 +371,16 @@
             // System Diagnosis
             let sysStatus = document.getElementById('sysStatus');
             let sysMsg = document.getElementById('sysMsg');
+            let spamStat = document.getElementById('spamStat');
             
+            spamStat.innerText = `Junk Filtered: ${spamCount} TX`;
+
             if(gini > 0.5) {
                 sysStatus.innerText = "WARNING: OLIGARKI"; sysStatus.style.color = "var(--red)";
-                sysMsg.innerText = "Distribusi kekayaan sangat timpang. Perlu intervensi.";
+                sysMsg.innerText = "Distribusi kekayaan sangat timpang.";
             } else if (velRatio > 12) {
                 sysStatus.innerText = "WARNING: INFLASI"; sysStatus.style.color = "var(--red)";
-                sysMsg.innerText = "Perputaran uang terlalu cepat vs Supply.";
+                sysMsg.innerText = "Perputaran uang terlalu cepat.";
             } else {
                 sysStatus.innerText = "SEHAT / STABIL"; sysStatus.style.color = "var(--green)";
                 sysMsg.innerText = "Ekosistem berjalan dalam parameter wajar.";
@@ -352,5 +399,4 @@
 </script>
 
 </body>
-
 </html>
