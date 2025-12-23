@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nuswantara Wallet v25.4 (Auditor Core)</title>
+    <title>Nuswantara Wallet v25.5 (Split Ledger)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
@@ -23,7 +23,6 @@
         
         .sync-status { font-size: 0.55rem; color: #555; margin-top: 5px; font-style: italic; }
         
-        /* AUDIT DISPLAY */
         .audit-row { display: flex; justify-content: space-between; font-size: 0.65rem; color: #888; border-bottom: 1px solid #222; padding: 5px 0; }
         .audit-val { font-weight: bold; }
     </style>
@@ -62,7 +61,7 @@
     <div id="walletPanel" style="display:none;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
             <div style="text-align:left;">
-                <span style="font-size: 0.65rem; color: #f39c12; letter-spacing: 1px; font-weight: bold;">NUSWANTARA v25.4</span><br>
+                <span style="font-size: 0.65rem; color: #f39c12; letter-spacing: 1px; font-weight: bold;">NUSWANTARA v25.5</span><br>
                 <div style="display:flex; align-items:center;">
                     <div id="myIDDisplay" class="id-badge">ID: ...</div>
                     <button onclick="forceReport()" class="btn-report">📡 LAPOR</button>
@@ -213,7 +212,6 @@ if(myID) {
     localStorage.setItem('nw_name', myID);
 }
 
-// INI HANYA UNTUK UI LOAD AWAL, LOGIKA UTAMA ADA DI AUDITSYNC
 try {
     let rawHist = localStorage.getItem('nw_hist');
     history = rawHist ? JSON.parse(rawHist) : [];
@@ -245,28 +243,18 @@ async function auditSync() {
         
         let income = 0;
         let expense = 0;
-        history = []; // Reset History Lokal
+        history = []; 
 
         if (ledger) {
             for (let key in ledger) {
                 let tx = ledger[key];
                 
-                // 1. DATA CLEANING
-                // Ambil nilai, pastikan number
                 let val = Math.abs(Number(tx.val) || 0);
-                
-                // Bersihkan ID Pengirim & Penerima (Hapus spasi, Uppercase)
                 let sender = (tx.from || tx.sender || "").toString().trim().toUpperCase();
                 let receiver = (tx.to || "").toString().trim().toUpperCase();
                 let me = myID; 
 
-                // 2. VALIDASI DASAR (Signature Mint)
                 if (tx.type === 'MINT' && (!tx.signature || tx.signature.length < 10)) continue; 
-
-                // 3. LOGIKA SCORECARD (DEBIT / KREDIT)
-                // Apapun yang terjadi, kalau ID gue ada di 'to', itu PENDAPATAN.
-                // Apapun yang terjadi, kalau ID gue ada di 'from', itu PENGELUARAN.
-                // Kalau transfer ke diri sendiri? Pendapatan nambah, Pengeluaran nambah = Netral (0). AMAN.
 
                 let isRelated = false;
 
@@ -280,14 +268,13 @@ async function auditSync() {
                     isRelated = true;
                 }
 
-                // 4. SUSUN HISTORY UI
                 if(isRelated) {
                     let flow = "";
                     let displayType = tx.type;
                     
                     if (receiver === me && sender !== me) flow = "IN";
                     else if (sender === me && receiver !== me) flow = "OUT";
-                    else if (sender === me && receiver === me) flow = "SELF"; // Transfer diri sendiri
+                    else if (sender === me && receiver === me) flow = "SELF"; 
 
                     if(flow) {
                         history.push({
@@ -303,15 +290,12 @@ async function auditSync() {
             }
         }
 
-        // 5. FINAL CALCULATION
         totalMg = income - expense;
-        if(totalMg < 0) totalMg = 0; // Safety biar gak minus
+        if(totalMg < 0) totalMg = 0; 
 
-        // Simpan
         localStorage.setItem('nw_mg', totalMg);
         localStorage.setItem('nw_hist', JSON.stringify(history));
 
-        // Update UI Audit Table
         document.getElementById('auditIn').innerText = `+${(income/MG_PER_DIRHAM).toFixed(2)} Dr`;
         document.getElementById('auditOut').innerText = `-${(expense/MG_PER_DIRHAM).toFixed(2)} Dr`;
         document.getElementById('auditNet').innerText = `${(totalMg/MG_PER_DIRHAM).toFixed(2)} Dr`;
@@ -376,6 +360,7 @@ async function executeTransfer() {
         
         await fetch(`${DB_URL}inbox/${dest}.json`, { method: 'POST', body: JSON.stringify(token) });
         
+        // P2P TETAP PAKAI NONCE SAMA (GAK MASALAH KARENA TIDAK ADA CLAIM)
         await fetch(`${DB_URL}public_ledger/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ 
             type: 'P2P', 
             from: myID, 
@@ -385,7 +370,7 @@ async function executeTransfer() {
             tx_id: nonce 
         }) });
         
-        await auditSync(); // LANGSUNG AUDIT SETELAH TRANSFER
+        await auditSync();
         alert("✅ TRANSFER SUKSES!"); 
         document.getElementById('transferModal').style.display = 'none';
     } catch(e) { 
@@ -401,12 +386,15 @@ async function quickSend(mg, label) {
     const nonce = "W-" + Math.random().toString(36).substring(2, 7).toUpperCase();
     const token = "TOKEN-" + btoa(`${mg}:${Date.now()}:${nonce}` + "|" + createSig(`${mg}:${Date.now()}:${nonce}`, savedKey));
     
+    // CATAT PENGELUARAN (TIDAK AKAN TERTIMPA)
     fetch(`${DB_URL}public_ledger/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ type: 'CASH_OUT', from: myID, val: Number(mg), timestamp: Date.now(), tx_id: nonce }) });
     
     setTimeout(auditSync, 1500); 
     
     document.getElementById('qrResult').style.display = 'block'; document.getElementById('qrcode').innerHTML = ""; new QRCode(document.getElementById("qrcode"), { text: token, width: 200, height: 200 }); document.getElementById('textToken').innerText = token;
 }
+
+// === FIX UTAMA: PISAHKAN RECORD CLAIM DARI RECORD PENGIRIM ===
 async function execClaim() {
     let input = document.getElementById('tokenIn').value.replace("TOKEN-", "").trim(); if(!input) return;
     try {
@@ -421,12 +409,15 @@ async function execClaim() {
         if(cd && cd.claimed && cd.by === myID) { alert("♻️ Token milik sendiri dipulihkan."); auditSync(); return; }
 
         await fetch(`${DB_URL}used_tokens/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ claimed: true, by: myID, at: new Date().toISOString() }) });
-        await fetch(`${DB_URL}public_ledger/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ type: 'CLAIM_QR', to: myID, val: Number(mg), timestamp: Date.now(), tx_id: nonce }) });
+        
+        // PENTING: TAMBAHKAN SUFFIX '_CLAIM' AGAR FILE LAMA TIDAK TERTIMPA
+        await fetch(`${DB_URL}public_ledger/${nonce}_CLAIM.json`, { method: 'PUT', body: JSON.stringify({ type: 'CLAIM_QR', to: myID, val: Number(mg), timestamp: Date.now(), tx_id: nonce }) });
         
         await auditSync(); 
         alert("✅ DANA DITERIMA!"); document.getElementById('manualClaim').style.display = 'none';
     } catch(e) { alert("GAGAL: " + e); }
 }
+
 function toggleClaimManual() { let m = document.getElementById('manualClaim'); m.style.display = m.style.display === 'none' ? 'block' : 'none'; }
 function createSig(d, k) { let s = d + k; let h = 0; for (let i = 0; i < s.length; i++) { h = ((h << 5) - h) + s.charCodeAt(i); h |= 0; } return Math.abs(h).toString(36); }
 function copy(el) { navigator.clipboard.writeText(el.innerText); alert("Token Disalin"); }
