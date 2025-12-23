@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Balance Sheet Monitoring v5.5 (Date Fix)</title>
+    <title>Balance Sheet Monitor v5.6 (Anti-Spam)</title>
     <style>
         :root { --neon: #d4af37; --bg: #050505; --card: #111; --border: #333; }
         body { background-color: var(--bg); color: #e0e0e0; font-family: 'Segoe UI', monospace; margin: 0; padding: 20px; }
@@ -41,7 +41,7 @@
         .card-note { font-size: 0.55rem; color: #444; margin-top: 5px; font-style: italic; }
 
         /* DAILY STATS */
-        .daily-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 25px; }
+        .daily-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 25px; }
         .mini-card { background: #141414; border: 1px solid #222; padding: 10px; text-align: center; border-radius: 8px; }
         .mini-label { font-size: 0.55rem; color: #555; text-transform: uppercase; letter-spacing: 0.5px; }
         .mini-val { font-size: 1rem; font-weight: bold; margin-top: 2px; font-family: monospace; }
@@ -91,7 +91,7 @@
         <h1>MONITOR EKONOMI NUSWANTARA</h1>
         <div class="live-status">
             <span class="blink-dot"></span>
-            <span class="status-text">AUDIT MODE</span>
+            <span class="status-text">FILTERED MODE</span>
         </div>
     </div>
     
@@ -109,12 +109,12 @@
         </div>
     </div>
 
-    <div class="sec-title">AKTIVITAS EKONOMI</div>
+    <div class="sec-title">AKTIVITAS EKONOMI (ANTI-SPAM ACTIVE)</div>
     <div class="dashboard">
         <div class="card" style="border-color: #3498db;">
             <div class="card-title" style="color:#3498db;">Total Volume Transaksi</div>
             <div id="velocityVal" class="card-val blue">0.00 Dr</div>
-            <div class="card-note">Akumulasi Pergerakan Uang</div>
+            <div class="card-note">Akumulasi Pergerakan Uang Valid</div>
         </div>
         <div class="card" style="border-color: #2ecc71;">
             <div class="card-title" style="color:#2ecc71;">Populasi Terdaftar</div>
@@ -136,6 +136,10 @@
             <div class="mini-label" style="color:#2ecc71;">CETAK / FISIK</div>
             <div id="dailyMintCount" class="mini-val" style="color:#fff;">0</div>
         </div>
+        <div class="mini-card" style="border-bottom: 2px solid #e74c3c;">
+            <div class="mini-label" style="color:#e74c3c;">FILTERED JUNK</div>
+            <div id="spamCount" class="mini-val" style="color:#fff;">0</div>
+        </div>
     </div>
 
     <div class="ledger-box">
@@ -150,7 +154,7 @@
             </thead>
             <tbody id="tableBody">
                 <tr><td colspan="4" style="text-align:center; padding:50px; color:#555;">
-                    📡 Mengambil Data Audit...
+                    📡 Mengambil Data & Menyaring Spam...
                 </td></tr>
             </tbody>
         </table>
@@ -164,8 +168,10 @@
     const MG_PER_DIRHAM = 2980;
     const MG_PER_DINAR = 80460;
     
+    // LIMIT ANTI-SPAM: Transaksi > 10 Dinar sekali kirim dianggap Injector/Anomaly
+    const SPAM_THRESHOLD_MG = 800000; 
+
     // --- KONFIGURASI TANGGAL ---
-    // Offset +3 biar sinkron: (22 + 3 = 25 Lumbung)
     const DATE_OFFSET = 3; 
     const DAY_START_HOUR = 3;
     const DAILY_LIMIT = 1000;
@@ -199,8 +205,8 @@
     function getNusaCalendar(timestamp) {
         let rawDate = new Date(timestamp);
         let adjustedDate = new Date(rawDate.getTime());
-        adjustedDate.setHours(rawDate.getHours() - DAY_START_HOUR); // Day Shift
-        adjustedDate.setDate(adjustedDate.getDate() + DATE_OFFSET); // Offset
+        adjustedDate.setHours(rawDate.getHours() - DAY_START_HOUR); 
+        adjustedDate.setDate(adjustedDate.getDate() + DATE_OFFSET); 
 
         let year = adjustedDate.getFullYear();
         let monthIdx = adjustedDate.getMonth();
@@ -250,26 +256,51 @@
     setInterval(updateHeader, 1000);
     updateHeader();
 
+    function normalizeID(id) {
+        if(!id) return "UNKNOWN";
+        return id.toString().replace(/[^A-Z0-9]/g, "").toUpperCase();
+    }
+
     function formatFlowID(id) {
-        if(!id || id.includes("SYS") || id.includes("BANK")) return `<span class="sys-badge">${id}</span>`;
-        return `<span class="id-badge">${id.replace("WARGA-", "")}</span>`;
+        let clean = normalizeID(id);
+        if(clean.includes("SYS") || clean.includes("BANK")) return `<span class="sys-badge">${clean}</span>`;
+        return `<span class="id-badge">${clean.replace("WARGA", "")}</span>`;
+    }
+
+    // --- SPAM DETECTOR ---
+    function isSpam(tx) {
+        let mg = Math.abs(Number(tx.val) || 0);
+        
+        // 1. Nominal Gila (> 10 Dinar)
+        if (mg > SPAM_THRESHOLD_MG) return true;
+        
+        // 2. MINT tanpa Signature (Suntikan Script Kiddie)
+        if (tx.type === 'MINT' && (!tx.signature || tx.signature.length < 15)) return true;
+
+        // 3. System Fix spam dari versi lama
+        if (tx.note === 'SYSTEM_FIX') return true;
+
+        // 4. Kirim ke diri sendiri untuk inflate volume
+        let from = normalizeID(tx.from || tx.sender);
+        let to = normalizeID(tx.to);
+        if (tx.type === 'P2P' && from === to) return true;
+
+        return false;
     }
 
     async function loadData() {
         const tbody = document.getElementById('tableBody');
         try {
-            // 1. FETCH PARALEL (Ledger + Census)
             let [resLedger, resCensus, resBank] = await Promise.all([
                 fetch(`${DB_URL}public_ledger.json`).then(r => r.json()),
                 fetch(`${DB_URL}census_report.json`).then(r => r.json()),
                 fetch(`${DB_URL}bank_reserve.json`).then(r => r.json().catch(() => null))
             ]);
 
-            // 2. HITUNG TOTAL SUPPLY DARI SENSUS (REAL ASSETS)
+            // --- HITUNG SUPPLY REAL (SENSUS) ---
             let totalSystemMg = 0;
             let population = 0;
 
-            // A. Saldo Wallet Warga
             if (resCensus) {
                 for (let k in resCensus) {
                     let bal = parseInt(resCensus[k].balance_mg) || 0;
@@ -277,49 +308,48 @@
                     population++;
                 }
             }
-            // B. Saldo Bank (Jika ada)
             if (resBank) {
                 let bankBal = parseInt(resBank.balance_mg) || 0;
                 totalSystemMg += bankBal;
             }
 
-            // 3. HITUNG TOKEN FISIK YANG BELUM DI-CLAIM (FLOAT)
+            // --- HITUNG VELOCITY & FLOAT (FILTERED) ---
             let velocityMg = 0;
             let physicalFloatMg = 0;
             let txs = [];
+            let spamCount = 0;
             
             if(resLedger) {
                 for(let k in resLedger) {
                     let tx = resLedger[k];
                     tx.txId = k;
-                    txs.push(tx);
                     
+                    // CEK SPAM DULU
+                    if(isSpam(tx)) {
+                        spamCount++;
+                        continue; // SKIP JUNK
+                    }
+
+                    txs.push(tx);
                     let mg = Math.abs(Number(tx.val) || 0);
                     
-                    // Velocity (Volume Transaksi)
                     velocityMg += mg;
 
-                    // Hitung Uang Fisik yg "Melayang"
                     if (tx.type === 'CASH_OUT') physicalFloatMg += mg;
                     if (tx.type === 'CLAIM_QR' || tx.type === 'INBOX_CLAIM') physicalFloatMg -= mg;
                 }
             }
             if (physicalFloatMg < 0) physicalFloatMg = 0;
-
-            // TOTAL SUPPLY = SENSUS + FISIK YG BELUM DICLAIM
             let finalSupplyMg = totalSystemMg + physicalFloatMg;
 
-            // --- 4. RENDER DATA ---
-            
-            // Supply Cards
+            // --- RENDER ---
             document.getElementById('circDinar').innerText = (finalSupplyMg / MG_PER_DINAR).toLocaleString('en-US', {maximumFractionDigits: 2}) + " Dn";
             document.getElementById('circDirham').innerText = (finalSupplyMg / MG_PER_DIRHAM).toLocaleString('en-US', {maximumFractionDigits: 2}) + " Dr";
-
-            // Velocity & Pop
             document.getElementById('velocityVal').innerText = (velocityMg / MG_PER_DIRHAM).toLocaleString('en-US', {maximumFractionDigits: 2}) + " Dr";
             document.getElementById('populationVal').innerText = population;
+            document.getElementById('spamCount').innerText = spamCount;
 
-            // Daily Stats Setup
+            // Daily Stats
             let now = new Date();
             let todayStart = new Date(now);
             if(now.getHours() < DAY_START_HOUR) { todayStart.setDate(todayStart.getDate() - 1); }
@@ -327,7 +357,6 @@
             let startLimitTime = todayStart.getTime();
             let dCount=0, dTrf=0, dMint=0;
 
-            // Render Table
             txs.sort((a,b) => (b.timestamp||b.time)-(a.timestamp||a.time));
             let html = "";
 
@@ -337,7 +366,6 @@
                 let rawId = tx.tx_id || tx.txId || "UNK";
                 let shortId = rawId.substring(0,8)+"...";
 
-                // Tentukan Badge & Label
                 let badgeClass="bg-trf", badgeLabel="TRANSFER";
                 let rawFrom = tx.from || tx.issuer || "SYSTEM";
                 let rawTo = tx.to || "SYSTEM";
@@ -354,7 +382,6 @@
                     badgeClass="bg-trf"; badgeLabel="TRANSFER";
                 }
 
-                // Daily Count
                 if(t >= startLimitTime) {
                     dCount++;
                     if(tx.type === 'MINT'||tx.type==='ISSUED'||tx.type==='CASH_OUT') dMint++;
@@ -371,10 +398,9 @@
                 html += `<tr><td>${detailTime}</td><td style="vertical-align:middle;"><span class="badge ${badgeClass}">${badgeLabel}</span><span class="tx-ref">#${shortId}</span></td><td>${flowHtml}</td><td style="text-align:right;"><span class="tx-val" style="color:${colorVal}">${valStr}</span></td></tr>`;
             });
 
-            if(txs.length === 0) html = '<tr><td colspan="4" style="text-align:center; padding:30px; color:#555;">Data Ledger Kosong</td></tr>';
+            if(txs.length === 0) html = '<tr><td colspan="4" style="text-align:center; padding:30px; color:#555;">Data Ledger Kosong / Semua Spam</td></tr>';
             tbody.innerHTML = html;
 
-            // Update Daily Counters
             let dlEl = document.getElementById('dailyTotalDisplay');
             dlEl.innerText = `${dCount} / ${DAILY_LIMIT}`;
             dlEl.className = "mini-val " + (dCount >= DAILY_LIMIT ? "limit-over" : (dCount >= DAILY_LIMIT*0.8 ? "limit-warn" : "limit-ok"));
@@ -390,5 +416,3 @@
 
 </body>
 </html>
-
-
