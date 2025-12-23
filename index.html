@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nuswantara Wallet v26.0 (Smart & Notify)</title>
+    <title>Nuswantara Wallet v27.0 (Struk & Trace)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
@@ -13,9 +13,15 @@
         .file-btn { background: #333; color: #aaa; border: 1px dashed #555; padding: 10px; width: 100%; border-radius: 10px; margin-top: 10px; cursor: pointer; font-size: 0.8rem; display:block; box-sizing:border-box; text-align:center;}
         .btn-scan-key { width:100%; padding:15px; background:#2980b9; color:white; border:none; border-radius:12px; font-weight:bold; font-size: 1rem; margin-bottom:10px; cursor:pointer; }
         
-        #paymentModal, #transferModal, #myIdModal, #setupPinModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:2000; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding:20px; box-sizing:border-box; }
+        #paymentModal, #transferModal, #myIdModal, #setupPinModal, #receiptModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:2000; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding:20px; box-sizing:border-box; }
         .pay-card { background:#151515; padding:30px; border-radius:20px; border:2px solid #f39c12; width:100%; max-width:400px; position: relative; box-shadow: 0 0 50px rgba(0,0,0,0.8); }
         
+        /* STRUK STYLE */
+        .receipt-card { background: #fff; color: #000; padding: 20px; border-radius: 5px; width: 100%; max-width: 350px; font-family: 'Courier New', monospace; box-shadow: 0 0 20px rgba(255,255,255,0.2); position: relative; }
+        .receipt-line { border-bottom: 1px dashed #000; margin: 10px 0; }
+        .receipt-row { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 5px; }
+        .receipt-val { font-weight: bold; }
+
         .id-badge { background: #000; color: #2ecc71; padding: 5px 8px; border-radius: 5px; font-size: 0.65rem; margin-top: 5px; border: 1px solid #333; display: inline-block; font-family: monospace; letter-spacing: 1px; }
         .btn-report { background: #d35400; color: white; border: none; padding: 5px 10px; border-radius: 5px; font-size: 0.6rem; cursor: pointer; margin-left: 5px; font-weight: bold; }
         .close-btn { position: absolute; top: 10px; right: 15px; color: #e74c3c; background: none; border: none; font-size: 1.2rem; cursor: pointer; font-weight: bold; }
@@ -58,17 +64,13 @@
         
         <button onclick="unlockWallet()" class="btn-action" style="width:100%; padding:15px; background:#f39c12; color:#000; border:none; border-radius:12px; font-weight:bold; font-size: 1rem;">BUKA WALLET</button>
         
-        <div style="margin-top:20px; border-top:1px solid #333; padding-top:10px;">
-            <button onclick="localStorage.clear(); location.reload()" style="background:none; border:none; color:#555; font-size:0.6rem; cursor:pointer; text-decoration:underline;">RESET APLIKASI (HAPUS DATA)</button>
-        </div>
-        
         <div id="loginMsg" style="color:#e74c3c; font-size:0.7rem; margin-top:10px;"></div>
     </div>
 
     <div id="walletPanel" style="display:none;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
             <div style="text-align:left;">
-                <span style="font-size: 0.65rem; color: #f39c12; letter-spacing: 1px; font-weight: bold;">NUSWANTARA v26.0</span><br>
+                <span style="font-size: 0.65rem; color: #f39c12; letter-spacing: 1px; font-weight: bold;">NUSWANTARA v27.0</span><br>
                 <div style="display:flex; align-items:center;">
                     <div id="myIDDisplay" class="id-badge">ID: ...</div>
                     <button onclick="forceReport()" class="btn-report">📡 LAPOR</button>
@@ -152,7 +154,7 @@
 
         <div style="border-top: 1px solid #222; padding-top:15px; margin-top: 20px;">
             <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px;">
-                <label style="font-size: 0.6rem; color: #444; text-transform: uppercase;">Riwayat Transaksi:</label>
+                <label style="font-size: 0.6rem; color: #444; text-transform: uppercase;">Riwayat Transaksi (Live ID):</label>
             </div>
             <div id="historyLog" style="height:150px; overflow-y:auto; font-size:0.65rem; background:#000; border-radius:12px; padding:12px;"></div>
         </div>
@@ -179,6 +181,47 @@
         <label style="display:block; text-align:left; color:#888; font-size:0.8rem; margin-bottom:5px;">PIN Transaksi (6 Angka):</label>
         <input type="password" id="trfPin" placeholder="******" maxlength="6" style="width:100%; padding:10px; background:#222; border:1px solid #555; color:white; border-radius:8px; margin-bottom:20px; text-align:center; letter-spacing: 5px;">
         <button onclick="executeTransfer()" class="btn-action" style="width:100%; padding:15px; background:#8e44ad; color:white; border:none; border-radius:10px; font-weight:bold;">KIRIM SEKARANG</button>
+    </div>
+</div>
+
+<div id="receiptModal">
+    <div class="receipt-card">
+        <h3 style="margin:0; text-align:center;">BUKTI TRANSAKSI</h3>
+        <p style="text-align:center; font-size:0.7rem; margin-top:5px; margin-bottom:15px;">NUSWANTARA WALLET</p>
+        
+        <div class="receipt-line"></div>
+        
+        <div class="receipt-row">
+            <span>TANGGAL:</span>
+            <span class="receipt-val" id="rcptDate">...</span>
+        </div>
+        <div class="receipt-row">
+            <span>ID TRX:</span>
+            <span class="receipt-val" id="rcptId" style="font-size:0.6rem;">...</span>
+        </div>
+        
+        <div class="receipt-line"></div>
+
+        <div class="receipt-row">
+            <span>DARI:</span>
+            <span class="receipt-val" id="rcptFrom">SAYA</span>
+        </div>
+        <div class="receipt-row">
+            <span>KE:</span>
+            <span class="receipt-val" id="rcptTo">...</span>
+        </div>
+        
+        <div class="receipt-line"></div>
+        
+        <div style="text-align:center; margin:15px 0;">
+            <div style="font-size:0.8rem;">TOTAL KIRIM</div>
+            <div class="receipt-val" id="rcptAmt" style="font-size:1.5rem;">0.00 Dr</div>
+            <div style="font-size:0.7rem; color:#555;">STATUS: BERHASIL</div>
+        </div>
+        
+        <div class="receipt-line"></div>
+        
+        <button onclick="document.getElementById('receiptModal').style.display='none'" style="width:100%; padding:10px; background:#000; color:white; border:none; font-family:monospace; cursor:pointer;">TUTUP</button>
     </div>
 </div>
 
@@ -213,7 +256,6 @@ if (savedKey && !myID) {
     localStorage.setItem('nw_name', myID);
 }
 
-// FORCE ID UPPERCASE
 if(myID) {
     myID = myID.trim().toUpperCase();
     localStorage.setItem('nw_name', myID);
@@ -237,13 +279,11 @@ if(savedKey === "") {
     document.getElementById('lockTitle').innerText = "LOGIN WALLET";
 }
 
-// --- UTILS: NORMALIZE ID (HILANGKAN - dan SPASI) UNTUK PENCOCOKAN ---
 function normalizeID(id) {
     if(!id) return "";
     return id.toString().replace(/[^A-Z0-9]/g, "").toUpperCase();
 }
 
-// --- TOAST NOTIFICATION SYSTEM ---
 function showToast(msg, type = 'success') {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
@@ -257,7 +297,15 @@ function showToast(msg, type = 'success') {
     }, 3000);
 }
 
-// --- CORE FUNCTION: THE AUDITOR (LOGIKA BUKU BESAR + NORMALIZE) ---
+// --- FUNGSI STRUK BARU ---
+function showReceipt(txId, to, amt, date) {
+    document.getElementById('rcptDate').innerText = date;
+    document.getElementById('rcptId').innerText = txId;
+    document.getElementById('rcptTo').innerText = to;
+    document.getElementById('rcptAmt').innerText = amt.toFixed(2) + " Dr";
+    document.getElementById('receiptModal').style.display = 'flex';
+}
+
 async function auditSync(silent = false) {
     if(!myID) return;
     let statusEl = document.getElementById('syncStatus');
@@ -269,7 +317,7 @@ async function auditSync(silent = false) {
         
         let income = 0;
         let expense = 0;
-        let oldMg = totalMg; // Simpan saldo lama untuk cek ada uang masuk gak
+        let oldMg = totalMg;
         history = []; 
 
         if (ledger) {
@@ -278,7 +326,6 @@ async function auditSync(silent = false) {
                 
                 let val = Math.abs(Number(tx.val) || 0);
                 
-                // === MAGIC FIX: PAKE NORMALIZE ===
                 let sender = normalizeID(tx.from || tx.sender);
                 let receiver = normalizeID(tx.to);
                 let me = normalizeID(myID); 
@@ -312,7 +359,7 @@ async function auditSync(silent = false) {
                             label: (val/MG_PER_DIRHAM).toFixed(2) + " Dr",
                             val: val,
                             time: new Date(tx.timestamp || tx.time || Date.now()).toLocaleTimeString(),
-                            txId: tx.tx_id || key
+                            txId: tx.tx_id || key // INI KUNCI PELACAKANNYA
                         });
                     }
                 }
@@ -322,7 +369,6 @@ async function auditSync(silent = false) {
         totalMg = income - expense;
         if(totalMg < 0) totalMg = 0; 
 
-        // DETEKSI UANG MASUK BARU
         if (totalMg > oldMg && !silent) {
             let diff = (totalMg - oldMg) / MG_PER_DIRHAM;
             showToast(`💰 DANA MASUK: +${diff.toFixed(2)} Dr`);
@@ -354,16 +400,11 @@ async function auditSync(silent = false) {
     }
 }
 
-// --- CHECK USER EXIST (ANTI GHOST TRANSFER) ---
 async function checkUserExist(id) {
-    // 1. Cek Exact Match
     let res = await fetch(`${DB_URL}census_report/${id}.json`);
     let data = await res.json();
     if (data) return true;
 
-    // 2. Cek Versi Normal (Kalau ada fitur pencarian global, krn firebase key sensitif, kita coba minimalisir)
-    // Untuk saat ini, kita return false jika exact match gagal, TAPI...
-    // Kita coba variasi umum: tambah/hapus strip
     let altId = id.includes("-") ? id.replace("-", "") : (id.slice(0, 5) + "-" + id.slice(5));
     let res2 = await fetch(`${DB_URL}census_report/${altId}.json`);
     let data2 = await res2.json();
@@ -372,7 +413,6 @@ async function checkUserExist(id) {
     return false;
 }
 
-// --- STANDARD FUNCTIONS ---
 function validatePassword(pass) { return /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{6,}$/.test(pass); }
 function unlockWallet() {
     let k = document.getElementById('loginKey').value.trim();
@@ -390,7 +430,6 @@ function unlockWallet() {
             document.getElementById('walletPanel').style.display = "block";
             if(!savedTxPin) document.getElementById('setupPinModal').style.display = 'flex';
             auditSync(); 
-            // Auto sync tiap 10 detik buat cek uang masuk
             setInterval(() => auditSync(true), 10000); 
         } else {
             msg.innerText = "PASSWORD SALAH!"; document.getElementById('loginPass').value = "";
@@ -417,7 +456,6 @@ async function executeTransfer() {
     btn.innerText = "⏳ CEK ID...";
     btn.disabled = true;
 
-    // CEK APAKAH PENERIMA ADA
     try {
         let exists = await checkUserExist(dest);
         if(!exists) {
@@ -455,7 +493,9 @@ async function executeTransfer() {
         }) });
         
         await auditSync(true);
-        showToast("✅ TRANSFER SUKSES!"); 
+        // TAMPILKAN STRUK
+        showReceipt(nonce, dest, amtDr, new Date().toLocaleString());
+        
         document.getElementById('transferModal').style.display = 'none';
     } catch(e) { 
         showToast("Error: " + e, "error"); 
@@ -524,7 +564,11 @@ function renderLog() {
     history.sort((a, b) => new Date(b.time) - new Date(a.time));
     document.getElementById('historyLog').innerHTML = history.slice(0, 30).map(h => `
         <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #222; align-items:center;">
-            <div><span style="color:${h.flow==='IN'?'#2ecc71':'#e74c3c'}; font-weight:bold; font-size:0.75rem;">${h.flow==='IN'?'⬇️':'⬆️'} ${h.t}</span><br><small style="color:#555;">${h.time||"Recently"}</small></div>
+            <div style="width:70%;">
+                <span style="color:${h.flow==='IN'?'#2ecc71':'#e74c3c'}; font-weight:bold; font-size:0.75rem;">${h.flow==='IN'?'⬇️':'⬆️'} ${h.t}</span><br>
+                <small style="color:#555;">${h.time}</small>
+                <div style="font-size:0.5rem; color:#666; word-break:break-all;">ID: ${h.txId}</div>
+            </div>
             <span style="font-size:0.55rem; color:#aaa; font-family:monospace;">${h.label}</span>
         </div>`).join('');
 }
