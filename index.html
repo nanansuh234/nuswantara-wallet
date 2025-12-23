@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nuswantara Wallet v25.2 (Debug Core)</title>
+    <title>Nuswantara Wallet v25.3 (Final Logic)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        body { background-color: #050505; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; font-family: 'Segoe UI', monospace; color:white; }
-        .btn-action { cursor: pointer; transition: 0.2s; }
+        body { background-color: #050505; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; font-family: 'Courier New', monospace; color:white; }
+        .btn-action { cursor: pointer; transition: 0.2s; font-family: 'Segoe UI', sans-serif; }
         .btn-action:active { transform: scale(0.95); }
         .file-btn { background: #333; color: #aaa; border: 1px dashed #555; padding: 10px; width: 100%; border-radius: 10px; margin-top: 10px; cursor: pointer; font-size: 0.8rem; display:block; box-sizing:border-box; text-align:center;}
         .btn-scan-key { width:100%; padding:15px; background:#2980b9; color:white; border:none; border-radius:12px; font-weight:bold; font-size: 1rem; margin-bottom:10px; cursor:pointer; }
@@ -22,7 +22,21 @@
         input:focus { outline: none; border-color: #f39c12; }
         
         .sync-status { font-size: 0.55rem; color: #555; margin-top: 5px; font-style: italic; }
-        .debug-box { font-size: 0.5rem; color: #aaa; background: #111; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-family: monospace; border: 1px solid #333; word-break: break-all; }
+        
+        /* DEBUG BOX AGAR BISA LIHAT PROSES HITUNG */
+        .debug-log { 
+            width: 100%; 
+            height: 80px; 
+            background: #000; 
+            border: 1px solid #333; 
+            color: #0f0; 
+            font-size: 0.5rem; 
+            overflow-y: scroll; 
+            margin-bottom: 15px; 
+            padding: 5px; 
+            box-sizing: border-box; 
+            white-space: pre-wrap;
+        }
     </style>
 </head>
 <body>
@@ -59,7 +73,7 @@
     <div id="walletPanel" style="display:none;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
             <div style="text-align:left;">
-                <span style="font-size: 0.65rem; color: #f39c12; letter-spacing: 1px; font-weight: bold;">NUSWANTARA v25.2</span><br>
+                <span style="font-size: 0.65rem; color: #f39c12; letter-spacing: 1px; font-weight: bold;">NUSWANTARA v25.3</span><br>
                 <div style="display:flex; align-items:center;">
                     <div id="myIDDisplay" class="id-badge">ID: ...</div>
                     <button onclick="forceReport()" class="btn-report">📡 LAPOR</button>
@@ -70,17 +84,18 @@
         
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
             <div id="syncStatus" class="sync-status">Offline Ready</div>
-            <button onclick="deepSync()" style="background:none; border:1px solid #333; color:#2980b9; font-size:0.55rem; padding:3px 8px; border-radius:5px; cursor:pointer;">🔄 DEEP SYNC</button>
+            <button onclick="deepSync()" style="background:none; border:1px solid #333; color:#2980b9; font-size:0.55rem; padding:3px 8px; border-radius:5px; cursor:pointer;">🔄 FORCE SYNC</button>
         </div>
 
         <div style="background:#111; padding:20px; border-radius:20px; border: 1px solid #222; margin-bottom: 20px;">
-            <div style="display: flex; justify-content: space-around; text-align: center; margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-around; text-align: center; margin-bottom: 10px;">
                 <div><div id="valDinar" style="font-size: 2.8rem; font-weight: bold; color: #f39c12;">0</div><div style="font-size: 0.7rem; color: #888; font-weight:bold;">DINAR</div></div>
                 <div><div id="valDirham" style="font-size: 2.8rem; font-weight: bold; color: #bdc3c7;">0</div><div style="font-size: 0.7rem; color: #888; font-weight:bold;">DIRHAM</div></div>
             </div>
-            <div id="debugMonitor" class="debug-box">
-                Menunggu Sync...
-            </div>
+            
+            <div style="color:#aaa; font-size:0.5rem; margin-bottom:5px;">LOG DETEKTIF:</div>
+            <div id="debugLog" class="debug-log">Menunggu Sync...</div>
+
             <div style="border-top: 1px solid #222; padding-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-family: monospace;">
                 <div style="text-align: center; background: rgba(243, 156, 18, 0.1); padding: 8px; border-radius: 10px;">
                     <div id="goldGram" style="color: #f39c12; font-size: 0.9rem; font-weight: bold;">0.000g</div><div style="font-size: 0.55rem; color: #666;">EQ. EMAS (Au)</div>
@@ -206,8 +221,11 @@ if (savedKey && !myID) {
     localStorage.setItem('nw_name', myID);
 }
 
-// Ensure ID is trimmed
-if(myID) myID = myID.trim();
+// === FIX PENTING: ID HARUS UPPERCASE & NO SPACE ===
+if(myID) {
+    myID = myID.trim().toUpperCase();
+    localStorage.setItem('nw_name', myID); // Simpan ulang versi bersih
+}
 
 recalcBalance();
 
@@ -253,66 +271,67 @@ function recalcBalance() {
     updateUI();
 }
 
-// --- DEEP SYNC: PERBAIKAN LOGIKA UTAMA ---
+// --- DEEP SYNC: PERBAIKAN LOGIKA UTAMA (SENSITIVITY FIX) ---
 async function deepSync() {
     if(!myID) return;
     let statusEl = document.getElementById('syncStatus');
-    let debugEl = document.getElementById('debugMonitor');
-    statusEl.innerHTML = '<span class="pulse">⏳ Analyzing...</span>';
+    let logEl = document.getElementById('debugLog');
+    
+    statusEl.innerHTML = '<span class="pulse">⏳ Menganalisa Ledger...</span>';
     statusEl.style.color = "#f39c12";
+    logEl.innerText = `[${new Date().toLocaleTimeString()}] Start Sync...\nMY ID: "${myID}"\n`;
 
     try {
-        history = []; // WIPE LOCAL HISTORY, REBUILD FROM TRUTH
+        history = []; // BERSIHKAN LOKAL, KITA PERCAYA DB
         
         let res = await fetch(`${DB_URL}public_ledger.json`);
         let ledger = await res.json();
         
-        let countIn = 0;
-        let countOut = 0;
-        let totalValIn = 0;
-        let totalValOut = 0;
-        
         if (ledger) {
+            let processed = 0;
             for (let key in ledger) {
                 let tx = ledger[key];
                 
-                // MINT CHECK
+                // VALIDASI MINT (Signature Check)
                 if (tx.type === 'MINT' && (!tx.signature || tx.signature.length < 10)) continue; 
 
                 let flow = null;
                 let val = Number(tx.val) || 0;
                 let displayType = tx.type;
 
-                // NORMALISASI SENDER/RECEIVER (Hapus Spasi)
-                let txFrom = (tx.from || tx.sender || "").trim();
-                let txTo = (tx.to || "").trim();
-                let me = myID.trim();
+                // === KUNCI SUKSES: NORMALISASI DATA ===
+                // Paksa semua jadi UPPERCASE dan tanpa spasi sebelum dicek
+                let txFrom = (tx.from || tx.sender || "").toString().trim().toUpperCase();
+                let txTo = (tx.to || "").toString().trim().toUpperCase();
+                let me = myID; // Sudah di-uppercase di atas
+
+                // DEBUGGING LOG (Biar kelihatan kalau ada yg beda tipis)
+                // logEl.innerText += `Check: ${key} | F:${txFrom} -> T:${txTo} (${val})\n`;
 
                 // LOGIKA DETEKSI MILIK SIAPA
                 
                 // 1. KASUS TERIMA UANG (IN)
                 if (txTo === me) {
-                    // Cek jika kirim ke diri sendiri (abaikan)
-                    if (txFrom !== me) {
+                    if (txFrom !== me) { // Bukan kirim ke diri sendiri
                         flow = "IN";
-                        countIn++;
-                        totalValIn += val;
                         if(tx.type === 'P2P') displayType = "TERIMA ID";
                         else if(tx.type === 'CLAIM_QR') displayType = "CLAIM QR";
                     }
                 }
                 
                 // 2. KASUS KIRIM UANG (OUT)
-                else if (txFrom === me) {
-                    flow = "OUT";
-                    countOut++;
-                    totalValOut += val;
-                    if(tx.type === 'P2P') displayType = "KIRIM ID";
-                    else if(tx.type === 'CASH_OUT') displayType = "BUAT QR";
+                if (txFrom === me) {
+                    // Walaupun txTo == me (kirim diri sendiri), kita catat OUT dulu? 
+                    // TIDAK. Kirim diri sendiri = Netral (0).
+                    if (txTo !== me) {
+                        flow = "OUT";
+                        if(tx.type === 'P2P') displayType = "KIRIM ID";
+                        else if(tx.type === 'CASH_OUT') displayType = "BUAT QR";
+                    }
                 }
 
-                // JIKA VALID, MASUKKAN KE HISTORY
                 if(flow) {
+                    processed++;
                     history.push({
                         flow: flow,
                         t: displayType,
@@ -324,22 +343,19 @@ async function deepSync() {
                     });
                 }
             }
+            logEl.innerText += `Done. Found ${processed} transactions relevant to me.\n`;
         }
 
         recalcBalance(); 
-        statusEl.innerHTML = "✅ Synced Clean";
+        statusEl.innerHTML = "✅ SYNCED & MATCHED";
         statusEl.style.color = "#2ecc71";
-        
-        // DEBUG REPORT
-        debugEl.innerHTML = `SCAN REPORT:<br>Masuk: ${countIn} tx (${(totalValIn/MG_PER_DIRHAM).toFixed(1)} Dr)<br>Keluar: ${countOut} tx (${(totalValOut/MG_PER_DIRHAM).toFixed(1)} Dr)<br>Netto: ${((totalValIn-totalValOut)/MG_PER_DIRHAM).toFixed(1)} Dr`;
-        
         forceReport();
 
     } catch(e) {
         console.log("Error:", e);
         statusEl.innerHTML = "⚠️ Gagal Sync";
         statusEl.style.color = "#e74c3c";
-        debugEl.innerText = "Error: " + e.message;
+        logEl.innerText += "ERROR: " + e.message;
     }
 }
 
@@ -373,7 +389,7 @@ function saveTxPin() {
     document.getElementById('setupPinModal').style.display = 'none'; alert("PIN Tersimpan!");
 }
 async function executeTransfer() {
-    let dest = document.getElementById('trfDest').value.trim();
+    let dest = document.getElementById('trfDest').value.trim().toUpperCase(); // FORCE UPPER
     let amtDr = parseFloat(document.getElementById('trfAmt').value);
     let pin = document.getElementById('trfPin').value;
     if(!dest || dest === myID || !amtDr || amtDr <= 0 || pin !== savedTxPin) return alert("Data Transfer Invalid / PIN Salah");
@@ -386,12 +402,12 @@ async function executeTransfer() {
 
     try {
         const nonce = "TRF-" + Math.random().toString(36).substring(2, 9).toUpperCase();
-        // Konsisten pakai property 'from' dan 'to'
         const content = `${amtMg}:${Date.now()}:${nonce}:FROM_${myID}`;
         const token = "TOKEN-" + btoa(content + "|" + createSig(content, savedKey));
         
         await fetch(`${DB_URL}inbox/${dest}.json`, { method: 'POST', body: JSON.stringify(token) });
         
+        // PENTING: TULIS DENGAN FORMAT BAKU (UPPERCASE)
         await fetch(`${DB_URL}public_ledger/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ 
             type: 'P2P', 
             from: myID, 
@@ -416,11 +432,11 @@ async function quickSend(mg, label) {
     if(prompt(`🔐 PIN TRANSAKSI (6 Digit):`) !== savedTxPin) return alert("PIN SALAH!");
     const nonce = "W-" + Math.random().toString(36).substring(2, 7).toUpperCase();
     const token = "TOKEN-" + btoa(`${mg}:${Date.now()}:${nonce}` + "|" + createSig(`${mg}:${Date.now()}:${nonce}`, savedKey));
-    // Pastikan 'from' tercatat
+    
+    // TULIS DENGAN ATRIBUT FROM YANG JELAS
     fetch(`${DB_URL}public_ledger/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ type: 'CASH_OUT', from: myID, val: Number(mg), timestamp: Date.now(), tx_id: nonce }) });
     
-    // Tunggu sebentar sebelum sync agar DB sempat update
-    setTimeout(deepSync, 1000); 
+    setTimeout(deepSync, 1500); 
     
     document.getElementById('qrResult').style.display = 'block'; document.getElementById('qrcode').innerHTML = ""; new QRCode(document.getElementById("qrcode"), { text: token, width: 200, height: 200 }); document.getElementById('textToken').innerText = token;
 }
