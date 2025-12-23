@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nuswantara Wallet v24.0 (The Purge)</title>
+    <title>Nuswantara Wallet v25.0 (Genesis)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
@@ -51,7 +51,7 @@
         <button onclick="unlockWallet()" class="btn-action" style="width:100%; padding:15px; background:#f39c12; color:#000; border:none; border-radius:12px; font-weight:bold; font-size: 1rem;">BUKA WALLET</button>
         
         <div style="margin-top:20px; border-top:1px solid #333; padding-top:10px;">
-            <button onclick="localStorage.clear(); location.reload()" style="background:none; border:none; color:#555; font-size:0.6rem; cursor:pointer; text-decoration:underline;">RESET APLIKASI</button>
+            <button onclick="localStorage.clear(); location.reload()" style="background:none; border:none; color:#555; font-size:0.6rem; cursor:pointer; text-decoration:underline;">RESET APLIKASI (HAPUS DATA)</button>
         </div>
         
         <div id="loginMsg" style="color:#e74c3c; font-size:0.7rem; margin-top:10px;"></div>
@@ -60,7 +60,7 @@
     <div id="walletPanel" style="display:none;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
             <div style="text-align:left;">
-                <span style="font-size: 0.65rem; color: #f39c12; letter-spacing: 1px; font-weight: bold;">NUSWANTARA v24.0</span><br>
+                <span style="font-size: 0.65rem; color: #f39c12; letter-spacing: 1px; font-weight: bold;">NUSWANTARA v25.0</span><br>
                 <div style="display:flex; align-items:center;">
                     <div id="myIDDisplay" class="id-badge">ID: ...</div>
                     <button onclick="forceReport()" class="btn-report">📡 LAPOR</button>
@@ -188,6 +188,7 @@ let savedPass = localStorage.getItem('nw_pass') || "";
 let savedTxPin = localStorage.getItem('nw_tx_pin') || "";
 let totalMg = 0; 
 let history = [];
+let genesisTs = 0; // Waktu Kiamat
 
 try {
     let rawHist = localStorage.getItem('nw_hist');
@@ -222,7 +223,7 @@ function recalcBalance() {
     let calc = 0;
     if(!Array.isArray(history)) history = [];
     
-    // FILTER ULANG (Just in case)
+    // FILTER ULANG
     history = history.filter(h => h && h.val !== undefined && h.val !== null);
 
     // DEDUPLICATION
@@ -248,15 +249,20 @@ function recalcBalance() {
     updateUI();
 }
 
-// --- STRICT SYNC: REBUILD HISTORY FROM SCRATCH ---
+// --- STRICT SYNC: GENESIS PROTOCOL ---
 async function strictSync() {
     if(!myID) return;
     let statusEl = document.getElementById('syncStatus');
-    statusEl.innerHTML = '<span class="pulse">⏳ Rebuilding...</span>';
+    statusEl.innerHTML = '<span class="pulse">⏳ Syncing...</span>';
     statusEl.style.color = "#f39c12";
 
     try {
-        // 1. KOSONGKAN HISTORY LOCAL (Biar sampah ilang)
+        // 1. AMBIL GENESIS TIME
+        let statsRes = await fetch(`${DB_URL}market_stats.json`);
+        let stats = await statsRes.json();
+        genesisTs = (stats && stats.genesis_ts) ? stats.genesis_ts : 0;
+
+        // 2. KOSONGKAN HISTORY (Rebuild from zero)
         history = []; 
         
         let res = await fetch(`${DB_URL}public_ledger.json`);
@@ -265,13 +271,16 @@ async function strictSync() {
         if (ledger) {
             for (let key in ledger) {
                 let tx = ledger[key];
-                
-                // === IRON DOME FILTER (THE PURGE) ===
+                let ts = tx.timestamp || tx.time || 0;
+
+                // === FILTER 1: ZOMBIE CHECK ===
+                // Transaksi sebelum Genesis Time dibuang
+                if (ts < genesisTs) continue;
+
+                // === FILTER 2: FAKE MINT ===
                 if (tx.type === 'MINT') {
-                    // Kalau TANDA TANGAN KOSONG/PENDEK -> BUANG!
                     if (!tx.signature || tx.signature.length < 10) continue; 
                 }
-                // ====================================
 
                 let isMine = false, flow = "";
                 if (tx.to === myID) { isMine = true; flow = "IN"; }
@@ -283,7 +292,7 @@ async function strictSync() {
                         t: flow === "IN" ? "MASUK (SYNC)" : "KELUAR (SYNC)",
                         label: (Number(tx.val)/MG_PER_DIRHAM).toFixed(2) + " Dr",
                         val: Number(tx.val),
-                        time: new Date(tx.timestamp || tx.time).toLocaleTimeString(),
+                        time: new Date(ts).toLocaleTimeString(),
                         raw: key,
                         txId: tx.tx_id || key
                     });
@@ -291,10 +300,12 @@ async function strictSync() {
             }
         }
 
-        recalcBalance(); // Hitung ulang dari history yang sudah bersih
-        statusEl.innerHTML = "✅ Bersih & Aman";
+        recalcBalance(); // Hitung ulang
+        statusEl.innerHTML = "✅ Aman & Bersih";
         statusEl.style.color = "#2ecc71";
-        alert("SINKRONISASI TOTAL SELESAI!\nSemua data sampah telah dihapus.");
+        
+        // Auto-Lapor Sensus biar dashboard admin juga update
+        forceReport();
 
     } catch(e) {
         console.log("Error:", e);
@@ -363,20 +374,41 @@ async function execClaim() {
     try {
         let decoded = atob(input), parts = decoded.split("|")[0].split(":");
         if(parts.length < 3) throw "Format Invalid";
-        let mg = Number(parts[0]), nonce = parts[2];
+        let mg = Number(parts[0]), ts = Number(parts[1]), nonce = parts[2];
+        
+        // 🛡️ GENESIS CHECK SAAT KLAIM
+        // Kalau token ini dibuat sebelum Kiamat (Genesis), TOLAK!
+        // Ambil genesisTs terbaru dulu (cache di variabel global)
+        if(ts < genesisTs) {
+            alert("⛔ TOKEN KEDALUWARSA (ZOMBIE)!\nToken ini sudah tidak berlaku.");
+            return;
+        }
+
         if(history.some(h => h.txId === nonce)) { alert("Token sudah dipakai!"); return; }
         
+        // Cek status di server
+        let check = await fetch(`${DB_URL}used_tokens/${nonce}.json`);
+        let cd = await check.json();
+
+        // Recovery Mode
+        if(cd && cd.claimed && cd.by === myID) {
+             alert("♻️ Token milik sendiri. Saldo dipulihkan.");
+             strictSync();
+             return;
+        }
+
         await fetch(`${DB_URL}used_tokens/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ claimed: true, by: myID, at: new Date().toISOString() }) });
         await fetch(`${DB_URL}public_ledger/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ type: 'CLAIM_QR', to: myID, val: mg, timestamp: Date.now(), tx_id: nonce }) });
         
-        strictSync(); alert("✅ DANA DITERIMA!"); document.getElementById('manualClaim').style.display = 'none';
+        strictSync(); 
+        alert("✅ DANA DITERIMA!"); document.getElementById('manualClaim').style.display = 'none';
     } catch(e) { alert("GAGAL: " + e); }
 }
 function toggleClaimManual() { let m = document.getElementById('manualClaim'); m.style.display = m.style.display === 'none' ? 'block' : 'none'; }
 function createSig(d, k) { let s = d + k; let h = 0; for (let i = 0; i < s.length; i++) { h = ((h << 5) - h) + s.charCodeAt(i); h |= 0; } return Math.abs(h).toString(36); }
 function copy(el) { navigator.clipboard.writeText(el.innerText); alert("Token Disalin"); }
 function logout() { location.reload(); }
-async function forceReport() { let btn = document.querySelector('.btn-report'); btn.innerText = "..."; try { await fetch(`${DB_URL}census_report/${myID}.json`, { method: 'PUT', body: JSON.stringify({ name: myID, balance_mg: totalMg, last: Date.now() }) }); alert("Laporan Sensus Terkirim"); } catch(e){} btn.innerText = "📡 LAPOR"; }
+async function forceReport() { try { await fetch(`${DB_URL}census_report/${myID}.json`, { method: 'PUT', body: JSON.stringify({ name: myID, balance_mg: totalMg, last: Date.now() }) }); } catch(e){} }
 function updateUI() { 
     if(isNaN(totalMg)) totalMg = 0;
     document.getElementById('myIDDisplay').innerText = myID; 
@@ -403,7 +435,7 @@ function startScanner() { document.getElementById('scanner-wrapper').style.displ
 function stopScanner() { if(html5QrCode) html5QrCode.stop().then(() => { document.getElementById('scanner-wrapper').style.display = 'none'; }); }
 function scanFromFile(inp, target) { if(!inp.files.length) return; let sId = target==='loginKey'?'setupReader':'reader'; const s = new Html5Qrcode(sId); s.scanFile(inp.files[0], true).then(txt => { document.getElementById(target).value = txt; if(target==='loginKey') stopSetupScan(); else { stopScanner(); execClaim(); } }).catch(e => alert("Gagal baca QR")); }
 
-window.onload = function() { if(savedKey) { recalcBalance(); updateUI(); } }
+window.onload = function() { if(savedKey) { strictSync(); updateUI(); } }
 </script>
 </body>
 </html>
