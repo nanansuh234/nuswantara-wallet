@@ -3,253 +3,244 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Satgas Token Palsu v12.0 (Deep Trace)</title>
+    <title>Satgas Token Palsu v13.0 (The Truth)</title>
     <style>
-        :root { 
-            --bg: #050505; --card: #111; --border: #333; 
-            --gold: #f1c40f; --blue: #3498db; --green: #2ecc71; 
-            --red: #e74c3c; --orange: #e67e22;
-        }
-        body { background-color: var(--bg); color: #e0e0e0; font-family: 'Segoe UI', monospace; margin: 0; padding: 20px; }
-        .container { max-width: 1300px; margin: 0 auto; border: 1px solid var(--border); border-radius: 15px; padding: 20px; background: #0b0b0b; }
+        :root { --bg: #050505; --card: #151515; --text: #e0e0e0; --gold: #f1c40f; --green: #2ecc71; --red: #e74c3c; --blue: #3498db; }
+        body { background-color: var(--bg); color: var(--text); font-family: 'Segoe UI', monospace; margin: 0; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
         
-        .header { text-align: center; border-bottom: 2px solid var(--gold); padding-bottom: 15px; margin-bottom: 25px; }
-        .title { font-size: 1.8rem; color: var(--gold); font-weight: bold; letter-spacing: 3px; text-transform: uppercase; }
-        .subtitle { font-size: 0.75rem; color: #888; letter-spacing: 1px; margin-top: 5px; }
+        .header { text-align: center; border-bottom: 2px solid var(--gold); padding-bottom: 20px; margin-bottom: 30px; }
+        .title { font-size: 2rem; color: var(--gold); font-weight: bold; letter-spacing: 2px; }
         
-        .grid-main { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; }
+        /* DASHBOARD GRID */
+        .grid-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }
+        .card { background: var(--card); padding: 20px; border-radius: 15px; border: 1px solid #333; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .val { font-size: 2rem; font-weight: bold; margin: 10px 0; }
+        .lbl { font-size: 0.7rem; color: #888; text-transform: uppercase; letter-spacing: 1px; }
         
-        /* CARDS */
-        .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
-        .card { background: #141414; border: 1px solid #222; padding: 15px; text-align: center; border-radius: 10px; }
-        .val { font-size: 1.3rem; font-weight: bold; color: #fff; margin: 5px 0; }
-        .lbl { font-size: 0.6rem; color: #888; text-transform: uppercase; }
-        
-        /* TRACE TREE VISUALIZATION */
-        .trace-container { background: #0a0505; border: 1px solid #400; border-radius: 10px; padding: 15px; height: 600px; overflow-y: auto; }
-        .trace-header { color: var(--red); font-weight: bold; border-bottom: 1px dashed #500; padding-bottom: 10px; margin-bottom: 10px; display:flex; justify-content:space-between; }
-        
-        .node { font-family: monospace; font-size: 0.8rem; padding: 5px 0; border-left: 1px dashed #333; margin-left: 10px; position: relative; }
-        .node::before { content: '↳'; color: #555; margin-right: 5px; margin-left: -8px; }
-        
-        .lvl-0 { margin-left: 0; border: none; font-weight: bold; font-size: 0.9rem; color: var(--red); margin-bottom: 10px; border-bottom: 1px solid #222; padding-bottom: 5px; }
-        .lvl-0::before { content: '💀'; color: inherit; margin-right: 5px; }
-        
-        .lvl-1 { margin-left: 20px; color: #ff5555; }
-        .lvl-2 { margin-left: 40px; color: #ff8888; }
-        .lvl-3 { margin-left: 60px; color: #ffaaaa; }
-        .lvl-4 { margin-left: 80px; color: #ffcccc; }
-        .lvl-5 { margin-left: 100px; color: #fff; opacity: 0.7; }
+        /* COLORS & BORDERS */
+        .c-gold { border-top: 4px solid var(--gold); color: var(--gold); }
+        .c-blue { border-top: 4px solid var(--blue); color: var(--blue); }
+        .c-red { border-top: 4px solid var(--red); color: var(--red); }
+        .c-green { border-top: 4px solid var(--green); color: var(--green); }
 
-        .amt { font-weight: bold; color: #fff; background: #222; padding: 1px 4px; border-radius: 3px; font-size: 0.7rem; }
-        .impact-badge { font-size: 0.6rem; background: var(--red); color: #000; padding: 2px 5px; border-radius: 3px; font-weight: bold; margin-left: 5px; }
-
-        /* ACTION PANEL */
-        .action-panel { background: #111; border: 1px solid #333; border-radius: 10px; padding: 15px; }
-        .btn-burn { background: linear-gradient(45deg, #c0392b, #e74c3c); color: white; border: none; padding: 8px 15px; border-radius: 5px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 5px; }
-        .btn-burn:hover { transform: scale(1.02); }
-
-        .refresh-btn { position: fixed; bottom: 30px; right: 30px; background: var(--gold); color: #000; border: none; width: 50px; height: 50px; border-radius: 50%; font-weight: bold; cursor: pointer; z-index: 100; font-size: 1.5rem; }
+        /* TABLE */
+        .audit-box { background: var(--card); border-radius: 15px; border: 1px solid #333; overflow: hidden; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+        th { background: #111; padding: 15px; text-align: left; color: #aaa; border-bottom: 2px solid #333; text-transform: uppercase; }
+        td { padding: 12px 15px; border-bottom: 1px solid #222; }
+        tr:hover { background: #1a1a1a; }
+        
+        .num { font-family: 'Courier New', monospace; text-align: right; font-weight: bold; }
+        .status-badge { padding: 3px 8px; border-radius: 5px; font-size: 0.65rem; font-weight: bold; }
+        
+        .refresh-btn { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; border-radius: 50%; background: var(--gold); color: #000; border: none; font-size: 1.5rem; cursor: pointer; box-shadow: 0 0 20px rgba(241, 196, 15, 0.4); z-index: 100; transition: 0.3s; }
+        .refresh-btn:hover { transform: scale(1.1); }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="header">
-        <div class="title">NUSWANTARA COMMAND CENTER</div>
-        <div class="subtitle">v12.0 • DEEP TRACE & RECOVERY PROTOCOL</div>
+        <div class="title">NERACA FAKTA v13.0</div>
+        <div style="color:#888; font-size:0.9rem;">Audit Forensik: Hanya Menghitung Uang Valid (Ber-Signature)</div>
     </div>
 
-    <div class="stats-row">
-        <div class="card" style="border-color:var(--gold);">
-            <div class="lbl">Supply Resmi</div>
-            <div id="dispSupply" class="val" style="color:var(--gold);">0 Dr</div>
+    <div class="grid-stats">
+        <div class="card c-gold">
+            <div class="lbl">Total Supply Sah (Ledger)</div>
+            <div id="dispRealSupply" class="val">0.00 Dr</div>
+            <div style="font-size:0.7rem; color:#666;" id="dispRealDn">Equal: 0.00 Dn</div>
         </div>
-        <div class="card" style="border-color:var(--red);">
-            <div class="lbl">Uang Palsu (Patient Zero)</div>
-            <div id="dispFakeTotal" class="val" style="color:var(--red);">0 Dr</div>
+        <div class="card c-blue">
+            <div class="lbl">Sirkulasi Warga (Sensus)</div>
+            <div id="dispReported" class="val">0.00 Dr</div>
+            <div style="font-size:0.7rem; color:#666;">Data Laporan HP</div>
         </div>
-        <div class="card" style="border-color:var(--orange);">
-            <div class="lbl">Dampak Penyebaran</div>
-            <div id="dispSpread" class="val" style="color:var(--orange);">0 Dr</div>
-        </div>
-        <div class="card" style="border-color:var(--blue);">
-            <div class="lbl">Warga Terdampak</div>
-            <div id="dispVictims" class="val" style="color:var(--blue);">0</div>
+        <div class="card c-red">
+            <div class="lbl">Selisih / Uang Hantu</div>
+            <div id="dispDiff" class="val">0.00 Dr</div>
+            <div style="font-size:0.7rem; color:#666;">Harus di-wipe/sync</div>
         </div>
     </div>
 
-    <div class="grid-main">
-        <div class="action-panel">
-            <div style="color:var(--red); font-weight:bold; border-bottom:1px solid #333; padding-bottom:10px; margin-bottom:10px;">
-                🚨 SUMBER PENYEBARAN (TARGET OPERASI)
-            </div>
-            <div id="sourceList" style="height: 500px; overflow-y: auto;">
-                <div style="text-align:center; padding:20px; color:#555;">Memindai Ledger...</div>
-            </div>
+    <div class="audit-box">
+        <div style="padding:15px; border-bottom:1px solid #333; display:flex; justify-content:space-between;">
+            <span style="font-weight:bold; color:#fff;">RINCIAN PER WALLET</span>
+            <span style="font-size:0.7rem; color:#666;">*Data minus di ledger berarti error perhitungan lama</span>
         </div>
-
-        <div class="trace-container">
-            <div class="trace-header">
-                <span>🕸️ PETA PENYEBARAN DANA (DEPTH: 5)</span>
-                <span style="font-size:0.7rem; color:#888;">Live Tracing</span>
-            </div>
-            <div id="traceTree">
-                <div style="text-align:center; padding:50px; color:#555;">
-                    Pilih salah satu sumber di kiri untuk melihat jalur penyebaran.
-                </div>
-            </div>
-        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Wallet ID</th>
+                    <th class="num">Laporan (HP)</th>
+                    <th class="num">Fakta (Ledger)</th>
+                    <th class="num">Selisih</th>
+                    <th style="text-align:center;">Status</th>
+                </tr>
+            </thead>
+            <tbody id="auditTable">
+                <tr><td colspan="5" style="text-align:center; padding:40px; color:#555;">Sedang menghitung ulang seluruh blockchain...</td></tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div style="margin-top:20px; text-align:center; color:#444; font-size:0.7rem;">
+        Sistem mengabaikan transaksi MINT tanpa signature dan menghitung BURN sebagai pengurang supply.
     </div>
 </div>
 
-<button onclick="refreshData()" class="refresh-btn">↻</button>
+<button onclick="auditSystem()" class="refresh-btn">↻</button>
 
 <script>
     const DB_URL = "https://pasarnuswantara-default-rtdb.asia-southeast1.firebasedatabase.app/";
     const MG_PER_DIRHAM = 2980;
-    
-    let allTransactions = []; // Simpan semua TX di memori untuk tracing cepat
-    let detectedSources = []; // Simpan Patient Zero
+    const MG_PER_DINAR = 80460;
 
-    // --- FUNGSI TRACING REKURSIF (THE TRACKER) ---
-    function getTraceHTML(parentId, startTime, depth, parentAmount) {
-        if (depth > 5) return ""; // Stop di kedalaman 5
-
-        // Cari transaksi keluar dari parent SETELAH dia terima uang
-        // Logika: Dia cuma bisa nyebarin virus setelah dia terinfeksi
-        let children = allTransactions.filter(tx => 
-            tx.from === parentId && 
-            (tx.timestamp || tx.time) > startTime
-        );
-
-        let html = "";
-        let totalSpread = 0;
-
-        children.forEach(child => {
-            let valDr = (child.val / MG_PER_DIRHAM).toFixed(2);
-            totalSpread += child.val;
-            
-            let threatLevel = depth <= 2 ? "🔴 HIGH" : (depth <= 4 ? "🟠 MED" : "🟡 LOW");
-            
-            html += `<div class="node lvl-${depth}">
-                <span style="color:#aaa;">To:</span> <span style="font-weight:bold; color:#fff;">${child.to}</span> 
-                <span class="amt">${valDr} Dr</span>
-                <span style="font-size:0.6rem; color:#555;">(${new Date(child.timestamp||child.time).toLocaleTimeString()})</span>
-                ${getTraceHTML(child.to, child.timestamp||child.time, depth + 1, child.val)}
-            </div>`;
-        });
-
-        return html;
-    }
-
-    // --- KLIK SUMBER UNTUK LIHAT POHON ---
-    window.viewTree = function(sourceId, amountMg, startTime) {
-        let valDr = (amountMg / MG_PER_DIRHAM).toFixed(2);
-        
-        let treeHTML = `<div class="node lvl-0">
-            SUMBER: ${sourceId} <span class="amt" style="background:var(--red);">${valDr} Dr</span>
-            <div style="font-size:0.6rem; font-weight:normal; margin-top:5px; color:#aaa;">Waktu Injeksi: ${new Date(startTime).toLocaleString()}</div>
-        </div>`;
-        
-        // Mulai Tracing Anak-anaknya
-        treeHTML += getTraceHTML(sourceId, startTime, 1, amountMg);
-        
-        document.getElementById('traceTree').innerHTML = treeHTML;
-    };
-
-    // --- FUNGSI PEMUSNAHAN (INCINERATOR) ---
-    window.incinerateSource = async function(targetId, amountMg) {
-        if(!confirm(`🔥 BAKAR SUMBER INI?\nTarget: ${targetId}\nNilai: ${(amountMg/MG_PER_DIRHAM).toFixed(2)} Dr\n\nIni akan menetralkan sumber penyebaran.`)) return;
+    async function auditSystem() {
+        let btn = document.querySelector('.refresh-btn');
+        btn.style.transform = "rotate(360deg)";
+        document.getElementById('auditTable').innerHTML = '<tr><td colspan="5" style="text-align:center; padding:40px;">Syncing & Recalculating...</td></tr>';
         
         try {
-            const nonce = "BURN-" + Math.random().toString(36).substring(2, 9).toUpperCase();
-            await fetch(`${DB_URL}public_ledger/${nonce}.json`, {
-                method: 'PUT',
-                body: JSON.stringify({
-                    type: 'BURN', from: targetId, to: 'SYSTEM_INCINERATOR',
-                    val: amountMg, note: 'SOURCE_NEUTRALIZED',
-                    timestamp: Date.now(), tx_id: nonce, signature: 'SYSTEM_AUTO'
-                })
-            });
-            alert("✅ Target berhasil dinetralkan.");
-            refreshData();
-        } catch(e) { alert("Error: " + e); }
-    };
+            // 1. Fetch All Data
+            let [resLedger, resCensus] = await Promise.all([
+                fetch(`${DB_URL}public_ledger.json`).then(r => r.json()).catch(() => null),
+                fetch(`${DB_URL}census_report.json`).then(r => r.json()).catch(() => null)
+            ]);
 
-    async function refreshData() {
-        try {
-            let resLedger = await fetch(`${DB_URL}public_ledger.json`).then(r => r.json()).catch(() => null) || {};
-            let resCensus = await fetch(`${DB_URL}census_report.json`).then(r => r.json()).catch(() => null) || {};
-            
-            // Siapkan Data
-            allTransactions = Object.entries(resLedger).map(([k, v]) => ({
-                ...v, id: k, val: Math.abs(Number(v.val)||0)
-            })).sort((a,b) => (a.timestamp||a.time) - (b.timestamp||b.time));
+            let ledger = resLedger || {};
+            let census = resCensus || {};
 
-            let totalWallet = 0;
-            for(let k in resCensus) totalWallet += (parseInt(resCensus[k].balance_mg)||0);
+            // 2. REKONSTRUKSI LEDGER DARI NOL (THE TRUTH LOGIC)
+            // Kita hitung saldo setiap wallet berdasarkan transaksi yang VALID saja.
+            let realBalances = {}; 
+            let totalRealSupply = 0;
 
-            // Analisa Patient Zero
-            detectedSources = [];
-            let totalFake = 0;
-            let totalSpread = 0;
-            let victims = new Set();
+            // Urutkan transaksi berdasarkan waktu (Penting!)
+            let txs = Object.values(ledger).sort((a,b) => (a.timestamp||a.time) - (b.timestamp||b.time));
 
-            allTransactions.forEach(tx => {
-                // Cari Fake Mint (Unsigned)
-                if (tx.type === 'MINT' && (!tx.signature || tx.signature.length < 10)) {
-                    // Cek apakah sudah dibakar?
-                    let isBurned = allTransactions.some(t => t.type === 'BURN' && t.from === tx.to && t.val === tx.val);
-                    
-                    if(!isBurned) {
-                        detectedSources.push(tx);
-                        totalFake += tx.val;
-                        victims.add(tx.to); // Pelaku/Korban pertama
-                    }
+            txs.forEach(tx => {
+                let val = Math.abs(Number(tx.val) || 0);
+                
+                // === FILTER SUPER KETAT (IRON DOME) ===
+                let isFake = false;
+                
+                // Cek 1: MINTING BODONG (Tanpa Signature)
+                if (tx.type === 'MINT') {
+                    if (!tx.signature || tx.signature.length < 10) isFake = true;
                 }
                 
-                // Hitung penyebaran (kasar)
-                // Kalau pengirim ada di set victims, maka penerima juga victim
-                if (victims.has(tx.from) && tx.type !== 'BURN') {
-                    victims.add(tx.to);
-                    totalSpread += tx.val;
+                // Cek 2: BURN (Pembakaran/Buyback)
+                if (tx.type === 'BURN') {
+                    // Burn mengurangi supply pengirim
+                    if (tx.from) {
+                        if (!realBalances[tx.from]) realBalances[tx.from] = 0;
+                        realBalances[tx.from] -= val;
+                    }
+                    // Burn tidak menambah supply ke 'to' (System Incinerator)
+                    // Jadi tidak perlu 'realBalances[tx.to] += val'
+                    return; // Skip logic transfer bawah
+                }
+
+                if (!isFake) {
+                    // Logic Transfer Biasa / Valid Mint
+                    if (tx.to) {
+                        if (!realBalances[tx.to]) realBalances[tx.to] = 0;
+                        realBalances[tx.to] += val;
+                    }
+                    if (tx.from) {
+                        if (!realBalances[tx.from]) realBalances[tx.from] = 0;
+                        realBalances[tx.from] -= val;
+                    }
                 }
             });
 
-            // RENDER LIST KIRI
-            let listHtml = "";
-            if (detectedSources.length === 0) {
-                listHtml = '<div style="text-align:center; padding:20px; color:var(--green);">✅ AREA BERSIH</div>';
-            } else {
-                detectedSources.forEach(src => {
-                    let valDr = (src.val / MG_PER_DIRHAM).toFixed(2);
-                    listHtml += `
-                    <div style="background:#1a1a1a; padding:10px; border-bottom:1px solid #333; margin-bottom:5px; border-left:3px solid var(--red);">
-                        <div style="font-weight:bold; color:#fff;">${src.to}</div>
-                        <div style="font-size:0.7rem; color:var(--red);">+${valDr} Dr (ILEGAL)</div>
-                        <div style="display:flex; gap:5px; margin-top:5px;">
-                            <button class="btn-burn" style="background:#333; font-size:0.6rem; width:auto;" onclick="viewTree('${src.to}', ${src.val}, ${src.timestamp||src.time})">🔍 LACAK</button>
-                            <button class="btn-burn" style="width:auto;" onclick="incinerateSource('${src.to}', ${src.val})">🔥 BAKAR</button>
-                        </div>
-                    </div>`;
-                });
+            // 3. COMPARISON (AUDIT)
+            let tableHtml = "";
+            let totalReported = 0;
+            let totalDiff = 0;
+            
+            // Gabungkan ID dari Sensus & Ledger
+            let allIDs = new Set([...Object.keys(census), ...Object.keys(realBalances)]);
+
+            // Hitung Total Supply Real (Sum of positive balances)
+            // Kita abaikan System ID saat menjumlah supply beredar
+            totalRealSupply = 0;
+            for (let id in realBalances) {
+                if (id !== 'SYSTEM_MINING' && id !== 'SYSTEM_INCINERATOR' && realBalances[id] > 0) {
+                    totalRealSupply += realBalances[id];
+                }
             }
-            document.getElementById('sourceList').innerHTML = listHtml;
 
-            // UPDATE STATS
-            document.getElementById('dispSupply').innerText = (totalWallet/MG_PER_DIRHAM).toLocaleString('en-US', {maximumFractionDigits:0}) + " Dr";
-            document.getElementById('dispFakeTotal').innerText = (totalFake/MG_PER_DIRHAM).toLocaleString('en-US', {maximumFractionDigits:2}) + " Dr";
-            document.getElementById('dispSpread').innerText = (totalSpread/MG_PER_DIRHAM).toLocaleString('en-US', {maximumFractionDigits:2}) + " Dr";
-            document.getElementById('dispVictims').innerText = victims.size;
+            // Loop untuk Tabel
+            let rows = [];
+            allIDs.forEach(id => {
+                // Skip System IDs di Tabel
+                if(id === 'SYSTEM_MINING' || id === 'SYSTEM_INCINERATOR') return;
 
-        } catch(e) { console.error(e); }
+                let repMg = census[id] ? (parseInt(census[id].balance_mg) || 0) : 0;
+                let realMg = realBalances[id] || 0;
+                if (realMg < 0) realMg = 0; // Koreksi jika hitungan minus
+
+                totalReported += repMg;
+                
+                let diff = repMg - realMg;
+                totalDiff += diff;
+
+                // Tampilkan jika ada saldo atau selisih
+                if (repMg > 0 || realMg > 0 || diff !== 0) {
+                    let statusBadge = "";
+                    if (diff === 0) statusBadge = "<span class='status-badge' style='background:#2ecc71; color:black;'>✅ MATCH</span>";
+                    else if (diff > 0) statusBadge = "<span class='status-badge' style='background:#e74c3c; color:white;'>⚠️ INFLATED</span>";
+                    else statusBadge = "<span class='status-badge' style='background:#3498db; color:white;'>ℹ️ DEFLATED</span>";
+
+                    rows.push({
+                        id: id,
+                        rep: repMg,
+                        real: realMg,
+                        diff: diff,
+                        html: `<tr>
+                            <td style="font-family:monospace; color:#fff; font-weight:bold;">${id}</td>
+                            <td class="num" style="color:var(--blue);">${(repMg/MG_PER_DIRHAM).toFixed(2)}</td>
+                            <td class="num" style="color:var(--gold);">${(realMg/MG_PER_DIRHAM).toFixed(2)}</td>
+                            <td class="num" style="color:${diff!==0 ? 'var(--red)' : '#555'}">${(diff/MG_PER_DIRHAM).toFixed(2)}</td>
+                            <td style="text-align:center;">${statusBadge}</td>
+                        </tr>`
+                    });
+                }
+            });
+
+            // Sort: Yang selisihnya paling besar di atas
+            rows.sort((a,b) => b.diff - a.diff);
+            document.getElementById('auditTable').innerHTML = rows.map(r => r.html).join('');
+
+            // 4. UPDATE CARDS
+            document.getElementById('dispRealSupply').innerText = (totalRealSupply/MG_PER_DIRHAM).toLocaleString('en-US', {maximumFractionDigits:2}) + " Dr";
+            document.getElementById('dispRealDn').innerText = "Equal: " + (totalRealSupply/MG_PER_DINAR).toLocaleString('en-US', {maximumFractionDigits:2}) + " Dn";
+            
+            document.getElementById('dispReported').innerText = (totalReported/MG_PER_DIRHAM).toLocaleString('en-US', {maximumFractionDigits:2}) + " Dr";
+            
+            let diffVal = (totalReported - totalRealSupply) / MG_PER_DIRHAM;
+            let diffEl = document.getElementById('dispDiff');
+            diffEl.innerText = diffVal.toLocaleString('en-US', {maximumFractionDigits:2}) + " Dr";
+            
+            if(diffVal > 1) {
+                diffEl.style.color = "var(--red)";
+                diffEl.innerText = "+" + diffEl.innerText + " (Fake)";
+            } else {
+                diffEl.style.color = "var(--green)";
+            }
+
+        } catch(e) {
+            console.error(e);
+            alert("Audit Error: " + e);
+        }
+        btn.style.transform = "none";
     }
 
-    refreshData();
-    setInterval(refreshData, 5000);
+    auditSystem();
 </script>
 
 </body>
-
 </html>
