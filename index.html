@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nuswantara Wallet v25.1 (Ledger Fix)</title>
+    <title>Nuswantara Wallet v25.2 (Debug Core)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
@@ -22,8 +22,7 @@
         input:focus { outline: none; border-color: #f39c12; }
         
         .sync-status { font-size: 0.55rem; color: #555; margin-top: 5px; font-style: italic; }
-        .pulse { animation: pulse-animation 2s infinite; color: #f39c12; }
-        @keyframes pulse-animation { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        .debug-box { font-size: 0.5rem; color: #aaa; background: #111; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-family: monospace; border: 1px solid #333; word-break: break-all; }
     </style>
 </head>
 <body>
@@ -60,7 +59,7 @@
     <div id="walletPanel" style="display:none;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
             <div style="text-align:left;">
-                <span style="font-size: 0.65rem; color: #f39c12; letter-spacing: 1px; font-weight: bold;">NUSWANTARA v25.1 (Fixed)</span><br>
+                <span style="font-size: 0.65rem; color: #f39c12; letter-spacing: 1px; font-weight: bold;">NUSWANTARA v25.2</span><br>
                 <div style="display:flex; align-items:center;">
                     <div id="myIDDisplay" class="id-badge">ID: ...</div>
                     <button onclick="forceReport()" class="btn-report">📡 LAPOR</button>
@@ -71,13 +70,16 @@
         
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
             <div id="syncStatus" class="sync-status">Offline Ready</div>
-            <button onclick="strictSync()" style="background:none; border:1px solid #333; color:#2980b9; font-size:0.55rem; padding:3px 8px; border-radius:5px; cursor:pointer;">🔄 FORCE SYNC</button>
+            <button onclick="deepSync()" style="background:none; border:1px solid #333; color:#2980b9; font-size:0.55rem; padding:3px 8px; border-radius:5px; cursor:pointer;">🔄 DEEP SYNC</button>
         </div>
 
         <div style="background:#111; padding:20px; border-radius:20px; border: 1px solid #222; margin-bottom: 20px;">
             <div style="display: flex; justify-content: space-around; text-align: center; margin-bottom: 20px;">
                 <div><div id="valDinar" style="font-size: 2.8rem; font-weight: bold; color: #f39c12;">0</div><div style="font-size: 0.7rem; color: #888; font-weight:bold;">DINAR</div></div>
                 <div><div id="valDirham" style="font-size: 2.8rem; font-weight: bold; color: #bdc3c7;">0</div><div style="font-size: 0.7rem; color: #888; font-weight:bold;">DIRHAM</div></div>
+            </div>
+            <div id="debugMonitor" class="debug-box">
+                Menunggu Sync...
             </div>
             <div style="border-top: 1px solid #222; padding-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-family: monospace;">
                 <div style="text-align: center; background: rgba(243, 156, 18, 0.1); padding: 8px; border-radius: 10px;">
@@ -188,7 +190,6 @@ let savedPass = localStorage.getItem('nw_pass') || "";
 let savedTxPin = localStorage.getItem('nw_tx_pin') || "";
 let totalMg = 0; 
 let history = [];
-let genesisTs = 0; 
 
 try {
     let rawHist = localStorage.getItem('nw_hist');
@@ -204,6 +205,9 @@ if (savedKey && !myID) {
     myID = "WARGA-" + randomCode;
     localStorage.setItem('nw_name', myID);
 }
+
+// Ensure ID is trimmed
+if(myID) myID = myID.trim();
 
 recalcBalance();
 
@@ -249,75 +253,72 @@ function recalcBalance() {
     updateUI();
 }
 
-// --- STRICT SYNC: LOGIC PERBAIKAN ---
-async function strictSync() {
+// --- DEEP SYNC: PERBAIKAN LOGIKA UTAMA ---
+async function deepSync() {
     if(!myID) return;
     let statusEl = document.getElementById('syncStatus');
-    statusEl.innerHTML = '<span class="pulse">⏳ Syncing...</span>';
+    let debugEl = document.getElementById('debugMonitor');
+    statusEl.innerHTML = '<span class="pulse">⏳ Analyzing...</span>';
     statusEl.style.color = "#f39c12";
 
     try {
-        let statsRes = await fetch(`${DB_URL}market_stats.json`);
-        let stats = await statsRes.json();
-        genesisTs = (stats && stats.genesis_ts) ? stats.genesis_ts : 0;
-
-        history = []; // WIPE HISTORY
+        history = []; // WIPE LOCAL HISTORY, REBUILD FROM TRUTH
         
         let res = await fetch(`${DB_URL}public_ledger.json`);
         let ledger = await res.json();
         
+        let countIn = 0;
+        let countOut = 0;
+        let totalValIn = 0;
+        let totalValOut = 0;
+        
         if (ledger) {
             for (let key in ledger) {
                 let tx = ledger[key];
-                let ts = tx.timestamp || tx.time || 0;
-
-                // 1. ZOMBIE CHECK (Pre-Genesis)
-                if (ts < genesisTs) continue;
-
-                // 2. FAKE MINT CHECK
-                if (tx.type === 'MINT') {
-                    if (!tx.signature || tx.signature.length < 10) continue; 
-                }
+                
+                // MINT CHECK
+                if (tx.type === 'MINT' && (!tx.signature || tx.signature.length < 10)) continue; 
 
                 let flow = null;
                 let val = Number(tx.val) || 0;
                 let displayType = tx.type;
 
-                // === 3. CORE LOGIC (Pemisahan Tegas) ===
+                // NORMALISASI SENDER/RECEIVER (Hapus Spasi)
+                let txFrom = (tx.from || tx.sender || "").trim();
+                let txTo = (tx.to || "").trim();
+                let me = myID.trim();
+
+                // LOGIKA DETEKSI MILIK SIAPA
                 
-                // KASUS P2P (Transfer Antar Warga)
-                if (tx.type === 'P2P') {
-                    if (tx.from === myID && tx.to === myID) continue; // Kirim ke diri sendiri (Skip/Net Zero)
-                    
-                    if (tx.from === myID) {
-                        flow = "OUT"; 
-                        displayType = "KIRIM ID";
-                    } else if (tx.to === myID) {
+                // 1. KASUS TERIMA UANG (IN)
+                if (txTo === me) {
+                    // Cek jika kirim ke diri sendiri (abaikan)
+                    if (txFrom !== me) {
                         flow = "IN";
-                        displayType = "TERIMA ID";
+                        countIn++;
+                        totalValIn += val;
+                        if(tx.type === 'P2P') displayType = "TERIMA ID";
+                        else if(tx.type === 'CLAIM_QR') displayType = "CLAIM QR";
                     }
                 }
                 
-                // KASUS NON-P2P (Mint, Burn, Claim QR)
-                else {
-                    if (tx.to === myID) {
-                        flow = "IN";
-                        if(tx.type === 'CLAIM_QR') displayType = "CLAIM QR";
-                    }
-                    else if (tx.from === myID) {
-                        flow = "OUT";
-                        if(tx.type === 'CASH_OUT') displayType = "BUAT QR";
-                    }
+                // 2. KASUS KIRIM UANG (OUT)
+                else if (txFrom === me) {
+                    flow = "OUT";
+                    countOut++;
+                    totalValOut += val;
+                    if(tx.type === 'P2P') displayType = "KIRIM ID";
+                    else if(tx.type === 'CASH_OUT') displayType = "BUAT QR";
                 }
 
-                // JIKA TERDETEKSI SEBAGAI TRANSAKSI SAYA
+                // JIKA VALID, MASUKKAN KE HISTORY
                 if(flow) {
                     history.push({
                         flow: flow,
-                        t: displayType, // Tampilkan Tipe Asli
+                        t: displayType,
                         label: (val/MG_PER_DIRHAM).toFixed(2) + " Dr",
                         val: val,
-                        time: new Date(ts).toLocaleTimeString(),
+                        time: new Date(tx.timestamp || tx.time || Date.now()).toLocaleTimeString(),
                         raw: key,
                         txId: tx.tx_id || key
                     });
@@ -326,14 +327,19 @@ async function strictSync() {
         }
 
         recalcBalance(); 
-        statusEl.innerHTML = "✅ Synced (Fixed)";
+        statusEl.innerHTML = "✅ Synced Clean";
         statusEl.style.color = "#2ecc71";
+        
+        // DEBUG REPORT
+        debugEl.innerHTML = `SCAN REPORT:<br>Masuk: ${countIn} tx (${(totalValIn/MG_PER_DIRHAM).toFixed(1)} Dr)<br>Keluar: ${countOut} tx (${(totalValOut/MG_PER_DIRHAM).toFixed(1)} Dr)<br>Netto: ${((totalValIn-totalValOut)/MG_PER_DIRHAM).toFixed(1)} Dr`;
+        
         forceReport();
 
     } catch(e) {
         console.log("Error:", e);
         statusEl.innerHTML = "⚠️ Gagal Sync";
         statusEl.style.color = "#e74c3c";
+        debugEl.innerText = "Error: " + e.message;
     }
 }
 
@@ -354,7 +360,7 @@ function unlockWallet() {
             document.getElementById('lockScreen').style.display = "none";
             document.getElementById('walletPanel').style.display = "block";
             if(!savedTxPin) document.getElementById('setupPinModal').style.display = 'flex';
-            strictSync(); 
+            deepSync(); 
         } else {
             msg.innerText = "PASSWORD SALAH!"; document.getElementById('loginPass').value = "";
         }
@@ -374,31 +380,28 @@ async function executeTransfer() {
     let amtMg = Math.round(amtDr * MG_PER_DIRHAM);
     if(amtMg > totalMg) return alert("SALDO TIDAK CUKUP!");
     
-    // UI Feedback dulu biar gak double klik
     let btn = document.querySelector('#transferModal .btn-action');
     btn.innerText = "⏳ MENGIRIM...";
     btn.disabled = true;
 
     try {
         const nonce = "TRF-" + Math.random().toString(36).substring(2, 9).toUpperCase();
-        // Pastikan Data Type Konsisten
+        // Konsisten pakai property 'from' dan 'to'
         const content = `${amtMg}:${Date.now()}:${nonce}:FROM_${myID}`;
         const token = "TOKEN-" + btoa(content + "|" + createSig(content, savedKey));
         
-        // 1. KIRIM KE INBOX PENERIMA
         await fetch(`${DB_URL}inbox/${dest}.json`, { method: 'POST', body: JSON.stringify(token) });
         
-        // 2. TULIS DI LEDGER PUBLIK (PENTING BUAT SYNC PENGIRIM)
         await fetch(`${DB_URL}public_ledger/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ 
             type: 'P2P', 
             from: myID, 
             to: dest, 
-            val: Number(amtMg), // Paksa jadi Number
+            val: Number(amtMg), 
             timestamp: Date.now(), 
             tx_id: nonce 
         }) });
         
-        await strictSync();
+        await deepSync();
         alert("✅ TRANSFER SUKSES!"); 
         document.getElementById('transferModal').style.display = 'none';
     } catch(e) { 
@@ -413,8 +416,12 @@ async function quickSend(mg, label) {
     if(prompt(`🔐 PIN TRANSAKSI (6 Digit):`) !== savedTxPin) return alert("PIN SALAH!");
     const nonce = "W-" + Math.random().toString(36).substring(2, 7).toUpperCase();
     const token = "TOKEN-" + btoa(`${mg}:${Date.now()}:${nonce}` + "|" + createSig(`${mg}:${Date.now()}:${nonce}`, savedKey));
+    // Pastikan 'from' tercatat
     fetch(`${DB_URL}public_ledger/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ type: 'CASH_OUT', from: myID, val: Number(mg), timestamp: Date.now(), tx_id: nonce }) });
-    strictSync();
+    
+    // Tunggu sebentar sebelum sync agar DB sempat update
+    setTimeout(deepSync, 1000); 
+    
     document.getElementById('qrResult').style.display = 'block'; document.getElementById('qrcode').innerHTML = ""; new QRCode(document.getElementById("qrcode"), { text: token, width: 200, height: 200 }); document.getElementById('textToken').innerText = token;
 }
 async function execClaim() {
@@ -424,17 +431,16 @@ async function execClaim() {
         if(parts.length < 3) throw "Format Invalid";
         let mg = Number(parts[0]), ts = Number(parts[1]), nonce = parts[2];
         
-        if(ts < genesisTs) { alert("⛔ TOKEN KEDALUWARSA (ZOMBIE)!"); return; }
         if(history.some(h => h.txId === nonce)) { alert("Token sudah dipakai!"); return; }
         
         let check = await fetch(`${DB_URL}used_tokens/${nonce}.json`);
         let cd = await check.json();
-        if(cd && cd.claimed && cd.by === myID) { alert("♻️ Token milik sendiri dipulihkan."); strictSync(); return; }
+        if(cd && cd.claimed && cd.by === myID) { alert("♻️ Token milik sendiri dipulihkan."); deepSync(); return; }
 
         await fetch(`${DB_URL}used_tokens/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ claimed: true, by: myID, at: new Date().toISOString() }) });
         await fetch(`${DB_URL}public_ledger/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ type: 'CLAIM_QR', to: myID, val: Number(mg), timestamp: Date.now(), tx_id: nonce }) });
         
-        strictSync(); 
+        await deepSync(); 
         alert("✅ DANA DITERIMA!"); document.getElementById('manualClaim').style.display = 'none';
     } catch(e) { alert("GAGAL: " + e); }
 }
@@ -468,7 +474,7 @@ function startScanner() { document.getElementById('scanner-wrapper').style.displ
 function stopScanner() { if(html5QrCode) html5QrCode.stop().then(() => { document.getElementById('scanner-wrapper').style.display = 'none'; }); }
 function scanFromFile(inp, target) { if(!inp.files.length) return; let sId = target==='loginKey'?'setupReader':'reader'; const s = new Html5Qrcode(sId); s.scanFile(inp.files[0], true).then(txt => { document.getElementById(target).value = txt; if(target==='loginKey') stopSetupScan(); else { stopScanner(); execClaim(); } }).catch(e => alert("Gagal baca QR")); }
 
-window.onload = function() { if(savedKey) { strictSync(); updateUI(); } }
+window.onload = function() { if(savedKey) { deepSync(); updateUI(); } }
 </script>
 </body>
 </html>
