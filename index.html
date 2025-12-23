@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nuswantara Wallet v25.5 (Split Ledger)</title>
+    <title>Nuswantara Wallet v26.0 (Smart & Notify)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
@@ -21,13 +21,20 @@
         .close-btn { position: absolute; top: 10px; right: 15px; color: #e74c3c; background: none; border: none; font-size: 1.2rem; cursor: pointer; font-weight: bold; }
         input:focus { outline: none; border-color: #f39c12; }
         
-        .sync-status { font-size: 0.55rem; color: #555; margin-top: 5px; font-style: italic; }
+        /* TOAST NOTIFICATION */
+        #toast-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 3000; width: 90%; max-width: 400px; }
+        .toast { background: rgba(30, 30, 30, 0.95); color: white; padding: 15px; border-radius: 10px; margin-bottom: 10px; border-left: 5px solid #2ecc71; box-shadow: 0 5px 15px rgba(0,0,0,0.5); display: flex; justify-content: space-between; align-items: center; animation: slideIn 0.3s ease-out; font-family: 'Segoe UI', sans-serif; font-size: 0.8rem; }
+        .toast.error { border-left-color: #e74c3c; }
+        .toast.info { border-left-color: #3498db; }
+        @keyframes slideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         
         .audit-row { display: flex; justify-content: space-between; font-size: 0.65rem; color: #888; border-bottom: 1px solid #222; padding: 5px 0; }
         .audit-val { font-weight: bold; }
     </style>
 </head>
 <body>
+
+<div id="toast-container"></div>
 
 <div id="walletApp" style="border: 4px solid #f39c12; background: #000; border-radius: 25px; padding: 25px; width: 100%; max-width: 500px; box-shadow: 0 0 60px rgba(243, 156, 18, 0.15); position:relative;">
     
@@ -61,7 +68,7 @@
     <div id="walletPanel" style="display:none;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
             <div style="text-align:left;">
-                <span style="font-size: 0.65rem; color: #f39c12; letter-spacing: 1px; font-weight: bold;">NUSWANTARA v25.5</span><br>
+                <span style="font-size: 0.65rem; color: #f39c12; letter-spacing: 1px; font-weight: bold;">NUSWANTARA v26.0</span><br>
                 <div style="display:flex; align-items:center;">
                     <div id="myIDDisplay" class="id-badge">ID: ...</div>
                     <button onclick="forceReport()" class="btn-report">📡 LAPOR</button>
@@ -82,8 +89,8 @@
             </div>
             
             <div style="background:#080808; padding:10px; border-radius:10px; border:1px dashed #333; margin-bottom:10px;">
-                <div class="audit-row"><span>Uang Masuk (Income):</span><span id="auditIn" class="audit-val" style="color:#2ecc71">0</span></div>
-                <div class="audit-row"><span>Uang Keluar (Expense):</span><span id="auditOut" class="audit-val" style="color:#e74c3c">0</span></div>
+                <div class="audit-row"><span>Uang Masuk:</span><span id="auditIn" class="audit-val" style="color:#2ecc71">0</span></div>
+                <div class="audit-row"><span>Uang Keluar:</span><span id="auditOut" class="audit-val" style="color:#e74c3c">0</span></div>
                 <div class="audit-row" style="border:none; padding-top:5px; font-size:0.7rem;"><span>SALDO BERSIH:</span><span id="auditNet" class="audit-val" style="color:#fff">0</span></div>
             </div>
 
@@ -230,12 +237,31 @@ if(savedKey === "") {
     document.getElementById('lockTitle').innerText = "LOGIN WALLET";
 }
 
-// --- CORE FUNCTION: THE AUDITOR (LOGIKA BUKU BESAR) ---
-async function auditSync() {
+// --- UTILS: NORMALIZE ID (HILANGKAN - dan SPASI) UNTUK PENCOCOKAN ---
+function normalizeID(id) {
+    if(!id) return "";
+    return id.toString().replace(/[^A-Z0-9]/g, "").toUpperCase();
+}
+
+// --- TOAST NOTIFICATION SYSTEM ---
+function showToast(msg, type = 'success') {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerText = msg;
+    container.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-20px)';
+        setTimeout(() => container.removeChild(toast), 300);
+    }, 3000);
+}
+
+// --- CORE FUNCTION: THE AUDITOR (LOGIKA BUKU BESAR + NORMALIZE) ---
+async function auditSync(silent = false) {
     if(!myID) return;
     let statusEl = document.getElementById('syncStatus');
-    statusEl.innerHTML = '<span class="pulse">⏳ MENGHITUNG ULANG...</span>';
-    statusEl.style.color = "#f39c12";
+    if(!silent) statusEl.innerHTML = '<span class="pulse">⏳ MENGHITUNG...</span>';
 
     try {
         let res = await fetch(`${DB_URL}public_ledger.json`);
@@ -243,6 +269,7 @@ async function auditSync() {
         
         let income = 0;
         let expense = 0;
+        let oldMg = totalMg; // Simpan saldo lama untuk cek ada uang masuk gak
         history = []; 
 
         if (ledger) {
@@ -250,9 +277,11 @@ async function auditSync() {
                 let tx = ledger[key];
                 
                 let val = Math.abs(Number(tx.val) || 0);
-                let sender = (tx.from || tx.sender || "").toString().trim().toUpperCase();
-                let receiver = (tx.to || "").toString().trim().toUpperCase();
-                let me = myID; 
+                
+                // === MAGIC FIX: PAKE NORMALIZE ===
+                let sender = normalizeID(tx.from || tx.sender);
+                let receiver = normalizeID(tx.to);
+                let me = normalizeID(myID); 
 
                 if (tx.type === 'MINT' && (!tx.signature || tx.signature.length < 10)) continue; 
 
@@ -293,6 +322,14 @@ async function auditSync() {
         totalMg = income - expense;
         if(totalMg < 0) totalMg = 0; 
 
+        // DETEKSI UANG MASUK BARU
+        if (totalMg > oldMg && !silent) {
+            let diff = (totalMg - oldMg) / MG_PER_DIRHAM;
+            showToast(`💰 DANA MASUK: +${diff.toFixed(2)} Dr`);
+        } else if (!silent) {
+            showToast("✅ Sync Selesai. Data Update.");
+        }
+
         localStorage.setItem('nw_mg', totalMg);
         localStorage.setItem('nw_hist', JSON.stringify(history));
 
@@ -301,15 +338,38 @@ async function auditSync() {
         document.getElementById('auditNet').innerText = `${(totalMg/MG_PER_DIRHAM).toFixed(2)} Dr`;
 
         updateUI(); 
-        statusEl.innerHTML = "✅ DATA TERVERIFIKASI";
-        statusEl.style.color = "#2ecc71";
-        forceReport();
+        if(!silent) {
+            statusEl.innerHTML = "✅ LIVE";
+            statusEl.style.color = "#2ecc71";
+            forceReport();
+        }
 
     } catch(e) {
         console.log("Error:", e);
-        statusEl.innerHTML = "⚠️ Gagal Sync";
-        statusEl.style.color = "#e74c3c";
+        if(!silent) {
+            statusEl.innerHTML = "⚠️ Gagal Sync";
+            statusEl.style.color = "#e74c3c";
+            showToast("Gagal Sync: " + e.message, "error");
+        }
     }
+}
+
+// --- CHECK USER EXIST (ANTI GHOST TRANSFER) ---
+async function checkUserExist(id) {
+    // 1. Cek Exact Match
+    let res = await fetch(`${DB_URL}census_report/${id}.json`);
+    let data = await res.json();
+    if (data) return true;
+
+    // 2. Cek Versi Normal (Kalau ada fitur pencarian global, krn firebase key sensitif, kita coba minimalisir)
+    // Untuk saat ini, kita return false jika exact match gagal, TAPI...
+    // Kita coba variasi umum: tambah/hapus strip
+    let altId = id.includes("-") ? id.replace("-", "") : (id.slice(0, 5) + "-" + id.slice(5));
+    let res2 = await fetch(`${DB_URL}census_report/${altId}.json`);
+    let data2 = await res2.json();
+    if (data2) return true;
+
+    return false;
 }
 
 // --- STANDARD FUNCTIONS ---
@@ -330,6 +390,8 @@ function unlockWallet() {
             document.getElementById('walletPanel').style.display = "block";
             if(!savedTxPin) document.getElementById('setupPinModal').style.display = 'flex';
             auditSync(); 
+            // Auto sync tiap 10 detik buat cek uang masuk
+            setInterval(() => auditSync(true), 10000); 
         } else {
             msg.innerText = "PASSWORD SALAH!"; document.getElementById('loginPass').value = "";
         }
@@ -339,20 +401,43 @@ function saveTxPin() {
     let pin = document.getElementById('newTxPin').value;
     if(pin.length !== 6 || isNaN(pin)) { alert("PIN harus 6 digit angka!"); return; }
     localStorage.setItem('nw_tx_pin', pin); savedTxPin = pin;
-    document.getElementById('setupPinModal').style.display = 'none'; alert("PIN Tersimpan!");
+    document.getElementById('setupPinModal').style.display = 'none'; showToast("PIN Disimpan!");
 }
+
 async function executeTransfer() {
     let dest = document.getElementById('trfDest').value.trim().toUpperCase(); 
     let amtDr = parseFloat(document.getElementById('trfAmt').value);
     let pin = document.getElementById('trfPin').value;
-    if(!dest || dest === myID || !amtDr || amtDr <= 0 || pin !== savedTxPin) return alert("Data Transfer Invalid / PIN Salah");
-    let amtMg = Math.round(amtDr * MG_PER_DIRHAM);
-    if(amtMg > totalMg) return alert("SALDO TIDAK CUKUP!");
     
+    if(!dest || !amtDr || amtDr <= 0) return showToast("Data tidak lengkap", "error");
+    if(dest === myID) return showToast("Transfer ke diri sendiri?", "error");
+    if(pin !== savedTxPin) return showToast("PIN SALAH!", "error");
+
     let btn = document.querySelector('#transferModal .btn-action');
-    btn.innerText = "⏳ MENGIRIM...";
+    btn.innerText = "⏳ CEK ID...";
     btn.disabled = true;
 
+    // CEK APAKAH PENERIMA ADA
+    try {
+        let exists = await checkUserExist(dest);
+        if(!exists) {
+            btn.innerText = "KIRIM SEKARANG";
+            btn.disabled = false;
+            return showToast(`❌ ID Penerima Tidak Ditemukan: ${dest}`, "error");
+        }
+    } catch(e) {
+        console.log("Skip check due to network");
+    }
+
+    btn.innerText = "⏳ MENGIRIM...";
+
+    let amtMg = Math.round(amtDr * MG_PER_DIRHAM);
+    if(amtMg > totalMg) {
+        btn.innerText = "KIRIM SEKARANG";
+        btn.disabled = false;
+        return showToast("SALDO TIDAK CUKUP!", "error");
+    }
+    
     try {
         const nonce = "TRF-" + Math.random().toString(36).substring(2, 9).toUpperCase();
         const content = `${amtMg}:${Date.now()}:${nonce}:FROM_${myID}`;
@@ -360,7 +445,6 @@ async function executeTransfer() {
         
         await fetch(`${DB_URL}inbox/${dest}.json`, { method: 'POST', body: JSON.stringify(token) });
         
-        // P2P TETAP PAKAI NONCE SAMA (GAK MASALAH KARENA TIDAK ADA CLAIM)
         await fetch(`${DB_URL}public_ledger/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ 
             type: 'P2P', 
             from: myID, 
@@ -370,31 +454,30 @@ async function executeTransfer() {
             tx_id: nonce 
         }) });
         
-        await auditSync();
-        alert("✅ TRANSFER SUKSES!"); 
+        await auditSync(true);
+        showToast("✅ TRANSFER SUKSES!"); 
         document.getElementById('transferModal').style.display = 'none';
     } catch(e) { 
-        alert("Error Jaringan: " + e); 
+        showToast("Error: " + e, "error"); 
     } finally {
         btn.innerText = "KIRIM SEKARANG";
         btn.disabled = false;
     }
 }
 async function quickSend(mg, label) {
-    if (mg > totalMg) return alert("SALDO TIDAK CUKUP!");
-    if(prompt(`🔐 PIN TRANSAKSI (6 Digit):`) !== savedTxPin) return alert("PIN SALAH!");
+    if (mg > totalMg) return showToast("SALDO TIDAK CUKUP!", "error");
+    if(prompt(`🔐 PIN TRANSAKSI (6 Digit):`) !== savedTxPin) return showToast("PIN SALAH!", "error");
     const nonce = "W-" + Math.random().toString(36).substring(2, 7).toUpperCase();
     const token = "TOKEN-" + btoa(`${mg}:${Date.now()}:${nonce}` + "|" + createSig(`${mg}:${Date.now()}:${nonce}`, savedKey));
     
-    // CATAT PENGELUARAN (TIDAK AKAN TERTIMPA)
     fetch(`${DB_URL}public_ledger/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ type: 'CASH_OUT', from: myID, val: Number(mg), timestamp: Date.now(), tx_id: nonce }) });
     
-    setTimeout(auditSync, 1500); 
+    setTimeout(() => auditSync(true), 1500); 
     
     document.getElementById('qrResult').style.display = 'block'; document.getElementById('qrcode').innerHTML = ""; new QRCode(document.getElementById("qrcode"), { text: token, width: 200, height: 200 }); document.getElementById('textToken').innerText = token;
+    showToast("QR Code Dibuat!");
 }
 
-// === FIX UTAMA: PISAHKAN RECORD CLAIM DARI RECORD PENGIRIM ===
 async function execClaim() {
     let input = document.getElementById('tokenIn').value.replace("TOKEN-", "").trim(); if(!input) return;
     try {
@@ -402,27 +485,31 @@ async function execClaim() {
         if(parts.length < 3) throw "Format Invalid";
         let mg = Number(parts[0]), ts = Number(parts[1]), nonce = parts[2];
         
-        if(history.some(h => h.txId === nonce)) { alert("Token sudah dipakai!"); return; }
+        if(history.some(h => h.txId === nonce)) { showToast("Token sudah dipakai!", "error"); return; }
         
         let check = await fetch(`${DB_URL}used_tokens/${nonce}.json`);
         let cd = await check.json();
-        if(cd && cd.claimed && cd.by === myID) { alert("♻️ Token milik sendiri dipulihkan."); auditSync(); return; }
+        if(cd && cd.claimed && cd.by === myID) { showToast("♻️ Token milik sendiri dipulihkan.", "info"); auditSync(); return; }
 
         await fetch(`${DB_URL}used_tokens/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ claimed: true, by: myID, at: new Date().toISOString() }) });
         
-        // PENTING: TAMBAHKAN SUFFIX '_CLAIM' AGAR FILE LAMA TIDAK TERTIMPA
         await fetch(`${DB_URL}public_ledger/${nonce}_CLAIM.json`, { method: 'PUT', body: JSON.stringify({ type: 'CLAIM_QR', to: myID, val: Number(mg), timestamp: Date.now(), tx_id: nonce }) });
         
-        await auditSync(); 
-        alert("✅ DANA DITERIMA!"); document.getElementById('manualClaim').style.display = 'none';
-    } catch(e) { alert("GAGAL: " + e); }
+        await auditSync(true); 
+        showToast("✅ DANA DITERIMA!"); document.getElementById('manualClaim').style.display = 'none';
+    } catch(e) { showToast("GAGAL: " + e, "error"); }
 }
 
 function toggleClaimManual() { let m = document.getElementById('manualClaim'); m.style.display = m.style.display === 'none' ? 'block' : 'none'; }
 function createSig(d, k) { let s = d + k; let h = 0; for (let i = 0; i < s.length; i++) { h = ((h << 5) - h) + s.charCodeAt(i); h |= 0; } return Math.abs(h).toString(36); }
-function copy(el) { navigator.clipboard.writeText(el.innerText); alert("Token Disalin"); }
+function copy(el) { navigator.clipboard.writeText(el.innerText); showToast("Disalin ke Clipboard"); }
 function logout() { location.reload(); }
-async function forceReport() { try { await fetch(`${DB_URL}census_report/${myID}.json`, { method: 'PUT', body: JSON.stringify({ name: myID, balance_mg: totalMg, last: Date.now() }) }); } catch(e){} }
+async function forceReport() { 
+    try { 
+        await fetch(`${DB_URL}census_report/${myID}.json`, { method: 'PUT', body: JSON.stringify({ name: myID, balance_mg: totalMg, last: Date.now() }) }); 
+        showToast("📡 Laporan Sensus Terkirim", "info");
+    } catch(e){} 
+}
 function updateUI() { 
     if(isNaN(totalMg)) totalMg = 0;
     document.getElementById('myIDDisplay').innerText = myID; 
@@ -447,7 +534,7 @@ function startSetupScan() { document.getElementById('setupReaderWrapper').style.
 function stopSetupScan() { if(setupQrCode) setupQrCode.stop().then(() => { document.getElementById('setupReaderWrapper').style.display = 'none'; }); }
 function startScanner() { document.getElementById('scanner-wrapper').style.display = 'block'; html5QrCode = new Html5Qrcode("reader"); html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (txt) => { stopScanner(); if(txt.startsWith("ID:")) { openTransfer(); document.getElementById('trfDest').value = txt.split(":")[1]; } else { document.getElementById('tokenIn').value = txt; execClaim(); } }, () => {}); }
 function stopScanner() { if(html5QrCode) html5QrCode.stop().then(() => { document.getElementById('scanner-wrapper').style.display = 'none'; }); }
-function scanFromFile(inp, target) { if(!inp.files.length) return; let sId = target==='loginKey'?'setupReader':'reader'; const s = new Html5Qrcode(sId); s.scanFile(inp.files[0], true).then(txt => { document.getElementById(target).value = txt; if(target==='loginKey') stopSetupScan(); else { stopScanner(); execClaim(); } }).catch(e => alert("Gagal baca QR")); }
+function scanFromFile(inp, target) { if(!inp.files.length) return; let sId = target==='loginKey'?'setupReader':'reader'; const s = new Html5Qrcode(sId); s.scanFile(inp.files[0], true).then(txt => { document.getElementById(target).value = txt; if(target==='loginKey') stopSetupScan(); else { stopScanner(); execClaim(); } }).catch(e => showToast("Gagal baca QR", "error")); }
 
 window.onload = function() { if(savedKey) { auditSync(); updateUI(); } }
 </script>
