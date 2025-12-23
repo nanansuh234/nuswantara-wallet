@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nuswantara Wallet v25.0 (Genesis)</title>
+    <title>Nuswantara Wallet v25.1 (Ledger Fix)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
@@ -60,7 +60,7 @@
     <div id="walletPanel" style="display:none;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
             <div style="text-align:left;">
-                <span style="font-size: 0.65rem; color: #f39c12; letter-spacing: 1px; font-weight: bold;">NUSWANTARA v25.0</span><br>
+                <span style="font-size: 0.65rem; color: #f39c12; letter-spacing: 1px; font-weight: bold;">NUSWANTARA v25.1 (Fixed)</span><br>
                 <div style="display:flex; align-items:center;">
                     <div id="myIDDisplay" class="id-badge">ID: ...</div>
                     <button onclick="forceReport()" class="btn-report">📡 LAPOR</button>
@@ -188,7 +188,7 @@ let savedPass = localStorage.getItem('nw_pass') || "";
 let savedTxPin = localStorage.getItem('nw_tx_pin') || "";
 let totalMg = 0; 
 let history = [];
-let genesisTs = 0; // Waktu Kiamat
+let genesisTs = 0; 
 
 try {
     let rawHist = localStorage.getItem('nw_hist');
@@ -249,7 +249,7 @@ function recalcBalance() {
     updateUI();
 }
 
-// --- STRICT SYNC: GENESIS PROTOCOL ---
+// --- STRICT SYNC: LOGIC PERBAIKAN ---
 async function strictSync() {
     if(!myID) return;
     let statusEl = document.getElementById('syncStatus');
@@ -257,13 +257,11 @@ async function strictSync() {
     statusEl.style.color = "#f39c12";
 
     try {
-        // 1. AMBIL GENESIS TIME
         let statsRes = await fetch(`${DB_URL}market_stats.json`);
         let stats = await statsRes.json();
         genesisTs = (stats && stats.genesis_ts) ? stats.genesis_ts : 0;
 
-        // 2. KOSONGKAN HISTORY (Rebuild from zero)
-        history = []; 
+        history = []; // WIPE HISTORY
         
         let res = await fetch(`${DB_URL}public_ledger.json`);
         let ledger = await res.json();
@@ -273,25 +271,52 @@ async function strictSync() {
                 let tx = ledger[key];
                 let ts = tx.timestamp || tx.time || 0;
 
-                // === FILTER 1: ZOMBIE CHECK ===
-                // Transaksi sebelum Genesis Time dibuang
+                // 1. ZOMBIE CHECK (Pre-Genesis)
                 if (ts < genesisTs) continue;
 
-                // === FILTER 2: FAKE MINT ===
+                // 2. FAKE MINT CHECK
                 if (tx.type === 'MINT') {
                     if (!tx.signature || tx.signature.length < 10) continue; 
                 }
 
-                let isMine = false, flow = "";
-                if (tx.to === myID) { isMine = true; flow = "IN"; }
-                else if (tx.from === myID || tx.sender === myID) { isMine = true; flow = "OUT"; }
+                let flow = null;
+                let val = Number(tx.val) || 0;
+                let displayType = tx.type;
 
-                if(isMine) {
+                // === 3. CORE LOGIC (Pemisahan Tegas) ===
+                
+                // KASUS P2P (Transfer Antar Warga)
+                if (tx.type === 'P2P') {
+                    if (tx.from === myID && tx.to === myID) continue; // Kirim ke diri sendiri (Skip/Net Zero)
+                    
+                    if (tx.from === myID) {
+                        flow = "OUT"; 
+                        displayType = "KIRIM ID";
+                    } else if (tx.to === myID) {
+                        flow = "IN";
+                        displayType = "TERIMA ID";
+                    }
+                }
+                
+                // KASUS NON-P2P (Mint, Burn, Claim QR)
+                else {
+                    if (tx.to === myID) {
+                        flow = "IN";
+                        if(tx.type === 'CLAIM_QR') displayType = "CLAIM QR";
+                    }
+                    else if (tx.from === myID) {
+                        flow = "OUT";
+                        if(tx.type === 'CASH_OUT') displayType = "BUAT QR";
+                    }
+                }
+
+                // JIKA TERDETEKSI SEBAGAI TRANSAKSI SAYA
+                if(flow) {
                     history.push({
                         flow: flow,
-                        t: flow === "IN" ? "MASUK (SYNC)" : "KELUAR (SYNC)",
-                        label: (Number(tx.val)/MG_PER_DIRHAM).toFixed(2) + " Dr",
-                        val: Number(tx.val),
+                        t: displayType, // Tampilkan Tipe Asli
+                        label: (val/MG_PER_DIRHAM).toFixed(2) + " Dr",
+                        val: val,
                         time: new Date(ts).toLocaleTimeString(),
                         raw: key,
                         txId: tx.tx_id || key
@@ -300,11 +325,9 @@ async function strictSync() {
             }
         }
 
-        recalcBalance(); // Hitung ulang
-        statusEl.innerHTML = "✅ Aman & Bersih";
+        recalcBalance(); 
+        statusEl.innerHTML = "✅ Synced (Fixed)";
         statusEl.style.color = "#2ecc71";
-        
-        // Auto-Lapor Sensus biar dashboard admin juga update
         forceReport();
 
     } catch(e) {
@@ -331,7 +354,7 @@ function unlockWallet() {
             document.getElementById('lockScreen').style.display = "none";
             document.getElementById('walletPanel').style.display = "block";
             if(!savedTxPin) document.getElementById('setupPinModal').style.display = 'flex';
-            strictSync(); // AUTO SYNC SAAT LOGIN
+            strictSync(); 
         } else {
             msg.innerText = "PASSWORD SALAH!"; document.getElementById('loginPass').value = "";
         }
@@ -350,22 +373,47 @@ async function executeTransfer() {
     if(!dest || dest === myID || !amtDr || amtDr <= 0 || pin !== savedTxPin) return alert("Data Transfer Invalid / PIN Salah");
     let amtMg = Math.round(amtDr * MG_PER_DIRHAM);
     if(amtMg > totalMg) return alert("SALDO TIDAK CUKUP!");
+    
+    // UI Feedback dulu biar gak double klik
+    let btn = document.querySelector('#transferModal .btn-action');
+    btn.innerText = "⏳ MENGIRIM...";
+    btn.disabled = true;
+
     try {
         const nonce = "TRF-" + Math.random().toString(36).substring(2, 9).toUpperCase();
+        // Pastikan Data Type Konsisten
         const content = `${amtMg}:${Date.now()}:${nonce}:FROM_${myID}`;
         const token = "TOKEN-" + btoa(content + "|" + createSig(content, savedKey));
+        
+        // 1. KIRIM KE INBOX PENERIMA
         await fetch(`${DB_URL}inbox/${dest}.json`, { method: 'POST', body: JSON.stringify(token) });
-        await fetch(`${DB_URL}public_ledger/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ type: 'P2P', from: myID, to: dest, val: amtMg, timestamp: Date.now(), tx_id: nonce }) });
-        strictSync();
-        alert("✅ TRANSFER SUKSES!"); document.getElementById('transferModal').style.display = 'none';
-    } catch(e) { alert("Error Jaringan: " + e); }
+        
+        // 2. TULIS DI LEDGER PUBLIK (PENTING BUAT SYNC PENGIRIM)
+        await fetch(`${DB_URL}public_ledger/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ 
+            type: 'P2P', 
+            from: myID, 
+            to: dest, 
+            val: Number(amtMg), // Paksa jadi Number
+            timestamp: Date.now(), 
+            tx_id: nonce 
+        }) });
+        
+        await strictSync();
+        alert("✅ TRANSFER SUKSES!"); 
+        document.getElementById('transferModal').style.display = 'none';
+    } catch(e) { 
+        alert("Error Jaringan: " + e); 
+    } finally {
+        btn.innerText = "KIRIM SEKARANG";
+        btn.disabled = false;
+    }
 }
 async function quickSend(mg, label) {
     if (mg > totalMg) return alert("SALDO TIDAK CUKUP!");
     if(prompt(`🔐 PIN TRANSAKSI (6 Digit):`) !== savedTxPin) return alert("PIN SALAH!");
     const nonce = "W-" + Math.random().toString(36).substring(2, 7).toUpperCase();
     const token = "TOKEN-" + btoa(`${mg}:${Date.now()}:${nonce}` + "|" + createSig(`${mg}:${Date.now()}:${nonce}`, savedKey));
-    fetch(`${DB_URL}public_ledger/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ type: 'CASH_OUT', from: myID, val: mg, timestamp: Date.now(), tx_id: nonce }) });
+    fetch(`${DB_URL}public_ledger/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ type: 'CASH_OUT', from: myID, val: Number(mg), timestamp: Date.now(), tx_id: nonce }) });
     strictSync();
     document.getElementById('qrResult').style.display = 'block'; document.getElementById('qrcode').innerHTML = ""; new QRCode(document.getElementById("qrcode"), { text: token, width: 200, height: 200 }); document.getElementById('textToken').innerText = token;
 }
@@ -376,29 +424,15 @@ async function execClaim() {
         if(parts.length < 3) throw "Format Invalid";
         let mg = Number(parts[0]), ts = Number(parts[1]), nonce = parts[2];
         
-        // 🛡️ GENESIS CHECK SAAT KLAIM
-        // Kalau token ini dibuat sebelum Kiamat (Genesis), TOLAK!
-        // Ambil genesisTs terbaru dulu (cache di variabel global)
-        if(ts < genesisTs) {
-            alert("⛔ TOKEN KEDALUWARSA (ZOMBIE)!\nToken ini sudah tidak berlaku.");
-            return;
-        }
-
+        if(ts < genesisTs) { alert("⛔ TOKEN KEDALUWARSA (ZOMBIE)!"); return; }
         if(history.some(h => h.txId === nonce)) { alert("Token sudah dipakai!"); return; }
         
-        // Cek status di server
         let check = await fetch(`${DB_URL}used_tokens/${nonce}.json`);
         let cd = await check.json();
-
-        // Recovery Mode
-        if(cd && cd.claimed && cd.by === myID) {
-             alert("♻️ Token milik sendiri. Saldo dipulihkan.");
-             strictSync();
-             return;
-        }
+        if(cd && cd.claimed && cd.by === myID) { alert("♻️ Token milik sendiri dipulihkan."); strictSync(); return; }
 
         await fetch(`${DB_URL}used_tokens/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ claimed: true, by: myID, at: new Date().toISOString() }) });
-        await fetch(`${DB_URL}public_ledger/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ type: 'CLAIM_QR', to: myID, val: mg, timestamp: Date.now(), tx_id: nonce }) });
+        await fetch(`${DB_URL}public_ledger/${nonce}.json`, { method: 'PUT', body: JSON.stringify({ type: 'CLAIM_QR', to: myID, val: Number(mg), timestamp: Date.now(), tx_id: nonce }) });
         
         strictSync(); 
         alert("✅ DANA DITERIMA!"); document.getElementById('manualClaim').style.display = 'none';
@@ -422,11 +456,10 @@ function updateUI() {
 function renderLog() {
     document.getElementById('historyLog').innerHTML = history.filter(h=>h&&h.val).slice(0, 30).map(h => `
         <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #222; align-items:center;">
-            <div><span style="color:${h.flow==='IN'?'#2ecc71':'#e74c3c'}; font-weight:bold; font-size:0.75rem;">${h.flow==='IN'?'⬇️':'⬆️'} ${h.label}</span><br><small style="color:#555;">${h.time||"Recently"}</small></div>
-            <span style="font-size:0.5rem; color:#444;">${h.t}</span>
+            <div><span style="color:${h.flow==='IN'?'#2ecc71':'#e74c3c'}; font-weight:bold; font-size:0.75rem;">${h.flow==='IN'?'⬇️':'⬆️'} ${h.t}</span><br><small style="color:#555;">${h.time||"Recently"}</small></div>
+            <span style="font-size:0.55rem; color:#aaa; font-family:monospace;">${h.label}</span>
         </div>`).join('');
 }
-// Helpers for QR & Scanner
 function openTransfer() { document.getElementById('transferModal').style.display = 'flex'; }
 function showMyID() { document.getElementById('myIdModal').style.display = 'flex'; document.getElementById('textMyId').innerText = myID; document.getElementById('qrMyId').innerHTML = ""; new QRCode(document.getElementById("qrMyId"), { text: "ID:" + myID, width: 200, height: 200 }); }
 function startSetupScan() { document.getElementById('setupReaderWrapper').style.display = 'block'; setupQrCode = new Html5Qrcode("setupReader"); setupQrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (txt) => { document.getElementById('loginKey').value = txt; stopSetupScan(); }, () => {}); }
